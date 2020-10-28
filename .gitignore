@@ -1,0 +1,9 @@
+ssi-bot.ini
+praw.ini
+bot-db.sqlite3*
+models/*
+
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
