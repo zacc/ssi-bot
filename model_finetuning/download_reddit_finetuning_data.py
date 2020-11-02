@@ -164,6 +164,10 @@ def main():
 
 			for submission_json_item in submission_json['data']:
 
+				if 'num_comments' not in submission_json_item:
+					# Sometimes the json['data'] can be empty
+					continue
+
 				if submission_json_item['num_comments'] == 0:
 					# ignore submissions with no comments
 					continue
