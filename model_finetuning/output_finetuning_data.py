@@ -137,7 +137,7 @@ def main():
 		for sub, output_text_gen_string in zip(all_submissions, executor.map(gather_comments_for_submission, all_submissions)):
 			counter += 1
 			if output_text_gen_string:
-				with open(filename, 'a') as fd:
+				with open(filename, 'a', encoding='utf-8') as fd:
 					fd.write(f'{output_text_gen_string}' + '\n')
 			print(f'subs counted: {counter}. {round(counter/len(all_submissions), 2)}')
 
