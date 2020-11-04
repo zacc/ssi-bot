@@ -4,7 +4,7 @@ from datetime import datetime
 
 from peewee import fn
 
-from db.pushshift_db import (Comment as db_Comment, Submission as db_Submission)
+from db import (Comment as db_Comment, Submission as db_Submission)
 
 import concurrent.futures
 
