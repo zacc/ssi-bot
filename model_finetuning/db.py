@@ -28,7 +28,7 @@ class Submission(Model):
 	title = TextField()
 	url = TextField(null=True)
 	class Meta:
-		database = dbInstanc
+		database = dbInstance
 	@property
 	def combined_text(self):
 		# A property that combines the title and selftext
