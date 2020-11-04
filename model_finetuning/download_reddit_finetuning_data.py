@@ -11,8 +11,8 @@ from queue import Queue
 import requests
 from datetime import datetime, timedelta
 
-from db.pushshift_db import (Comment as db_Comment, Submission as db_Submission)
-from db.pushshift_db import create_tables
+from db import (Comment as db_Comment, Submission as db_Submission)
+from db import create_tables
 
 start_date = datetime(2018, 1, 1)
 end_date = datetime(2020, 10, 19)
