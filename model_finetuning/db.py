@@ -47,6 +47,11 @@ class Comment(Model):
 	parent_id = TextField()
 	score = IntegerField()
 	stickied = BooleanField()
+	class Meta:
+		database = dbInstance
+		indexes = (
+			(("score", "link_id"), False),
+		)
 
 	def parent(self):
 		# This function gets the parent Comment or Submission
