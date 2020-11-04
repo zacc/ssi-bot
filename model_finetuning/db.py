@@ -27,7 +27,8 @@ class Submission(Model):
 	subreddit = TextField()
 	title = TextField()
 	url = TextField(null=True)
-
+	class Meta:
+		database = dbInstanc
 	@property
 	def combined_text(self):
 		# A property that combines the title and selftext
