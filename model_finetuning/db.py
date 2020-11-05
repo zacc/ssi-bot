@@ -7,7 +7,7 @@ import time
 from peewee import *
 
 db_file_path = os.path.join('pushshift.sqlite3')
-db = SqliteDatabase(db_file_path, thread_safe=True, pragmas={'journal_mode': 'wal2', 'foreign_keys': 0})
+db_instance = SqliteDatabase(db_file_path, thread_safe=True, pragmas={'journal_mode': 'wal2', 'foreign_keys': 0})
 
 
 class Submission(Model):
@@ -33,6 +33,9 @@ class Submission(Model):
 		# A property that combines the title and selftext
 		# For link
 		return f'{self.title} {self.selftext}'.strip()
+
+	class Meta:
+		database = db_instance
 
 
 class Comment(Model):
@@ -63,8 +66,14 @@ class Comment(Model):
 	def submission(self):
 		return Submission.get_by_id(self.link_id[3:])
 
+	class Meta:
+		database = db_instance
+		indexes = (
+			(("score", "link_id"), False),
+		)
+
 
 def create_tables():
 
 	table_list = [Submission, Comment]
-	db.create_tables(models=table_list)
+	db_instance.create_tables(models=table_list)
