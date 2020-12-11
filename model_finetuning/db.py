@@ -23,7 +23,7 @@ class Submission(Model):
 	score = IntegerField()
 	selftext = TextField()
 	spoiler = BooleanField(null=True)
-	stickied = BooleanField()
+	stickied = BooleanField(default=False)
 	subreddit = TextField()
 	title = TextField()
 	url = TextField(null=True)
@@ -49,7 +49,7 @@ class Comment(Model):
 	nest_level = IntegerField(null=True)
 	parent_id = TextField()
 	score = IntegerField()
-	stickied = BooleanField()
+	stickied = BooleanField(default=False)
 
 	def parent(self):
 		# This function gets the parent Comment or Submission
