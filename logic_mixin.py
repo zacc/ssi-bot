@@ -80,7 +80,12 @@ class LogicMixin():
 	def calculate_reply_probability(self, praw_thing):
 		# Ths function contains all of the logic used for deciding whether to reply
 
-		if praw_thing.author.name.lower() == self._praw.user.me().name.lower():
+		if not praw_thing.author:
+			# If the praw_thing has been deleted the author will be None,
+			# don't proceed to attempt a reply. Usually we will have downloaded
+			# the praw_thing before it is deleted so this won't get hit often.
+			return 0
+		elif praw_thing.author.name.lower() == self._praw.user.me().name.lower():
 			# The incoming praw object's author is the bot, so we won't reply
 			return 0
 

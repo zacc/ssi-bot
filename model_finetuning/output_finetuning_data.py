@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import random
 
 from datetime import datetime
 
@@ -25,7 +26,7 @@ text_removed = ['[removed]', '[deleted]']
 
 def gather_comments_for_submission(sub):
 
-	if text_matches_negative_keywords(sub.combined_text):
+	if any(s in sub.selftext for s in negative_keywords):
 		# if the submission contains a negative keyword, 
 		# ignore it so we don't train the bot on bad stuff
 		print(f"{sub.id} contains negative keywords")
@@ -105,41 +106,55 @@ def gather_comments_for_submission(sub):
 			return text_gen_string
 
 
-def text_matches_negative_keywords(text):
-	return any(s in text for s in negative_keywords)
-
-
 def main():
 
-	all_submissions = []
+	random.seed()
 
-	training_subreddits = []
 	bot_name = "training_output"
 
+	# Insert the names of the subreddits
+	training_subreddits = []
+
+	all_submissions = []
 	# all submissions ordered by date
 	all_submissions = list(db_Submission.select().
 		where((fn.Lower(db_Submission.subreddit).in_([s.lower() for s in training_subreddits])) &
 				(fn.Lower(db_Submission.author).not_in([a.lower() for a in author_blacklist]))
-				& (db_Submission.score > 1))
-		.order_by(db_Submission.created_utc.asc()))
+				& (db_Submission.score > 1)))
 
-	print(len(all_submissions))
+	# We'll shuffle all the submission records and split them into a training and evaluation
+	# lists in a 90/10 ratio. simpletransformers will use the evaluation to test the accuracy
+	# of the training
+	random.shuffle(all_submissions)
 
-	counter = 0
+	split_point = int(len(all_submissions) * 0.9)
+	training_submissions = all_submissions[:split_point]
+	eval_submissions = all_submissions[split_point:]
+
+	print(f'{len(training_submissions)} training submissions, {len(eval_submissions)} evaluation submissions')
 
 	# file name for the output text file
 	date_string = datetime.today().strftime('%d%m%y_%H%M')
-	global filename
-	filename = f'{bot_name}_{date_string}.txt'
+	counter = 0
 
 	# use concurrent futures (multiprocessing) to speed up the output
 	with concurrent.futures.ProcessPoolExecutor() as executor:
-		for sub, output_text_gen_string in zip(all_submissions, executor.map(gather_comments_for_submission, all_submissions)):
-			counter += 1
-			if output_text_gen_string:
-				with open(filename, 'a', encoding='utf-8') as fd:
+		filename = f'{bot_name}_{date_string}_training.txt'
+
+		with open(filename, 'a', encoding='utf-8') as fd:
+			for sub, output_text_gen_string in zip(training_submissions, executor.map(gather_comments_for_submission, training_submissions)):
+				counter += 1
+				if output_text_gen_string:
 					fd.write(f'{output_text_gen_string}' + '\n')
-			print(f'subs counted: {counter}. {round(counter/len(all_submissions), 2)}')
+				print(f'subs counted: {counter}. {round(counter/len(all_submissions), 2)}')
+
+		filename = f'{bot_name}_{date_string}_eval.txt'
+		with open(filename, 'a', encoding='utf-8') as fd:
+			for sub, output_text_gen_string in zip(eval_submissions, executor.map(gather_comments_for_submission, eval_submissions)):
+				counter += 1
+				if output_text_gen_string:
+					fd.write(f'{output_text_gen_string}' + '\n')
+				print(f'subs counted: {counter}. {round(counter/len(all_submissions), 2)}')
 
 
 if __name__ == '__main__':

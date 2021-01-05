@@ -26,9 +26,9 @@ class RedditIO(threading.Thread, LogicMixin):
 	_praw = None
 
 	_default_text_generation_parameters = {
-			'length': 260,
-			'prefix': None,
-			'seed': None,
+			'max_length': 260,
+			'num_return_sequences': 1,
+			'prompt': None,
 			'temperature': 0.8,
 			'top_k': 40,
 			'truncate': '<|eo',
@@ -113,12 +113,12 @@ class RedditIO(threading.Thread, LogicMixin):
 
 					logging.info(f"Configuring a textgen job for {praw_thing.type} {praw_thing.name}")
 
-					prefix = self._collate_tagged_comment_history(praw_thing) + self._get_reply_tag(praw_thing)
+					prompt = self._collate_tagged_comment_history(praw_thing) + self._get_reply_tag(praw_thing)
 
-					if prefix:
-						# If a prefix was returned, we can go ahead and create the text generation parameters dict
+					if prompt:
+						# If a prompt was returned, we can go ahead and create the text generation parameters dict
 						text_generation_parameters = self._default_text_generation_parameters.copy()
-						text_generation_parameters['prefix'] = prefix
+						text_generation_parameters['prompt'] = prompt
 
 				# insert it into the database
 				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters)
@@ -131,7 +131,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		for post_job in self.pending_post_jobs():
 
-			logging.info(f'Starting postjob {post_job.id}')
+			logging.info(f'Starting post job {post_job.id}')
 
 			# Increment the post attempts counter. 
 			# This is to prevent posting too many times if there are errors
