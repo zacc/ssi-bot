@@ -1,3 +1,4 @@
+# All active development is now being done on the simpletransformers branch, which uses pytorch/transformers GPT-2 models instead and supports Python >=3.8.
 
 Minimum Python requirement: Python 3.6
 
