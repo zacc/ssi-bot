@@ -172,6 +172,6 @@ class LogicMixin():
 		# work out the age of submission in hours
 		age_of_submission = (datetime.utcnow() - submission_created_utc).total_seconds() / 3600
 		# calculate rate of decay over 48 hours
-		rate_of_decay = 1 - (age_of_submission / 48)
+		rate_of_decay = max(0, 1 - (age_of_submission / 48))
 		# multiply the rate of decay by the reply probability
 		return reply_probability * rate_of_decay
