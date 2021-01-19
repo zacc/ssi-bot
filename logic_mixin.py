@@ -175,3 +175,31 @@ class LogicMixin():
 		rate_of_decay = max(0, 1 - (age_of_submission / 48))
 		# multiply the rate of decay by the reply probability
 		return reply_probability * rate_of_decay
+
+	def extract_reply_from_generated_text(self, prompt, generated_text, truncate):
+
+		# remove any cruft
+		generated_text = generated_text.replace('&amp;#x200B;\n', '')
+
+		# find the first instance of the end-of-comment tag, starting from the end of the prompt
+		index_of_truncate = generated_text.find(truncate, len(prompt))
+
+		if index_of_truncate == -1:
+			# the original truncate tag couldn't be found,
+			# but we'll still try and truncate the string at the last line break (end of paragraph)
+			# so that the text still looks clean.
+			index_of_truncate = generated_text.rfind("\\n")
+
+		if index_of_truncate == -1:
+			# still nothing could be found so just skip this one
+			# if this is hit often, increase the length of the generated text
+			logging.info("Truncate string not found")
+			return {}
+
+		# extract the text from between the prompt and the truncate point
+		reply_body = generated_text[len(prompt):index_of_truncate]
+		if reply_body:
+			return {'body': reply_body}
+
+		# Return nothing
+		return {}

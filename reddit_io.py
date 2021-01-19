@@ -158,13 +158,19 @@ class RedditIO(threading.Thread, LogicMixin):
 				logging.error(f'Could not get the source praw thing for {post_job.id}')
 				continue
 
+			reply_parameters = self.extract_reply_from_generated_text(\
+				post_job.text_generation_parameters['prompt'], post_job.generated_text, post_job.text_generation_parameters['truncate'])
+
+			if not reply_parameters:
+				logging.info(f"Reply body could not be found in generated text of job {post_job.id}")
+
 			# Remove the following line when you're 100% sure the model is ready to begin posting to reddit
 			# For testing, please use r/talkwithgpt2bots or r/testingground4bots/
 			# Check with mods on subsimgpt2interactive about getting your bot a *verified* flair
 			return
 
 			# Reply to the source thing with the generated text. A new praw_thing is returned
-			reply_praw_thing = source_praw_thing.reply(body=post_job.generated_text)
+			reply_praw_thing = source_praw_thing.reply(**reply_parameters)
 
 			# Add the new thing directly into the database,
 			# without text_gen parameters so that a new reply won't be started
@@ -173,6 +179,8 @@ class RedditIO(threading.Thread, LogicMixin):
 			# Set the name value of the reply that was posted, to finalize the job
 			post_job.posted_name = reply_praw_thing.name
 			post_job.save()
+
+			logging.info(f"Job {post_job.id} reply submitted successfully")
 
 	def set_thing_type(self, praw_thing):
 		# A little nasty but very useful...

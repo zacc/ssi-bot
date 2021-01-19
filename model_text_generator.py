@@ -55,7 +55,8 @@ class ModelTextGenerator(threading.Thread):
 					job.save()
 
 					# use the model to generate the text
-					generated_text = self.generate_text(job.text_generation_parameters)
+					# pass a copy of the parameters to keep the job values intact
+					generated_text = self.generate_text(job.text_generation_parameters.copy())
 					if generated_text:
 						# if the model generated text, set it into the 'job'
 						job.generated_text = generated_text
@@ -83,48 +84,14 @@ class ModelTextGenerator(threading.Thread):
 
 		start_time = time.time()
 
-		truncate = text_generation_parameters.pop('truncate')
+		# pop the prompt out from the args
 		prompt = text_generation_parameters.pop('prompt')
 
 		output_list = self._model.generate(prompt=prompt, args=text_generation_parameters)
 
-		# Because the truncate term (<|eor|>) can exist in the prompt,
-		# we'll roll our own logic to extract the generated text for the bot reply
-		cleaned_list = []
-
-		for t in output_list:
-			# remove any cruft
-			t = t.replace('&amp;#x200B;\n', '')
-
-			# find the first instance of the end-of-comment tag, starting from the end of the prompt
-			index_of_truncate = t.find(truncate, len(prompt))
-
-			if index_of_truncate == -1:
-				# the original truncate tag couldn't be found,
-				# but we'll still try and truncate the string at the last line break (end of paragraph)
-				# so that the text still looks clean.
-				index_of_truncate = t.rfind("\\n")
-
-			if index_of_truncate == -1:
-				# still nothing could be found so just skip this one
-				# if this is hit often, increase the length of the generated text
-				logging.info("Truncate string not found")
-				continue
-
-			# extract the text from between the prompt and the truncate point
-			final_string = t[len(prompt):index_of_truncate]
-			if final_string:
-				cleaned_list.append(final_string)
-
 		end_time = time.time()
 		duration = round(end_time - start_time, 1)
 
-		logging.info(f'{len(cleaned_list)} sample(s) of text generated in {duration} seconds.')
+		logging.info(f'{len(output_list)} sample(s) of text generated in {duration} seconds.')
 
-		if len(cleaned_list) > 0:
-			# At the moment the database can only handle one string of generated text
-			# Modifications to the database would be required to handle more than one
-			return cleaned_list[0]
-
-		# return None because we could not generated a string
-		return None
+		return output_list[0]
