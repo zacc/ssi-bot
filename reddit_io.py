@@ -4,15 +4,18 @@ import logging
 import random
 import threading
 import time
+import regex as re
 
 from configparser import ConfigParser
+from datetime import datetime, timedelta
 
 import praw
+from praw.models import (Submission as praw_Submission, Comment as praw_Comment)
 
 from logic_mixin import LogicMixin
 
 from db import Thing as db_Thing
-from praw.models import (Submission as praw_Submission, Comment as praw_Comment)
+from peewee import fn
 
 
 class RedditIO(threading.Thread, LogicMixin):
@@ -25,10 +28,25 @@ class RedditIO(threading.Thread, LogicMixin):
 
 	_praw = None
 
+	_subreddit = 'talkwithgpt2bots'
+	# talkwithgpt2 flair_id
+	_new_submission_flair_id = '280fd64a-7f2d-11ea-b209-0e5a7423541b'
+
+	# When your bot is ready to go live, uncomment this line
+	# Currently multiple subreddits not supported
+	# _subreddit = 'subsimgpt2interactive'
+	# subsimgpt2interactive flair_id
+	# _new_submission_flair_id = 'ff1e3b8e-a518-11ea-b87f-0e2836404d8b'
+
+	# Default is for new submissions to be disabled
+	_new_submission_frequency = timedelta(hours=0)
+	# Make a new submission every 26 hours
+	# _new_submission_frequency = timedelta(hours=26)
+
 	_default_text_generation_parameters = {
-			'length': 260,
-			'prefix': None,
-			'seed': None,
+			'max_length': 260,
+			'num_return_sequences': 1,
+			'prompt': None,
 			'temperature': 0.8,
 			'top_k': 40,
 			'truncate': '<|eo',
@@ -65,9 +83,23 @@ class RedditIO(threading.Thread, LogicMixin):
 			logging.info(f"Beginning to process outgoing post jobs")
 
 			try:
-				self.post_outgoing_jobs()
+				self.post_outgoing_reply_jobs()
 			except:
-				logging.exception("Exception occurred while processing the outgoing jobs")
+				logging.exception("Exception occurred while processing the outgoing reply jobs")
+
+			logging.info(f"Beginning to process outgoing new submission jobs")
+
+			try:
+				self.post_outgoing_new_submission_jobs()
+			except:
+				logging.exception("Exception occurred while processing the outgoing new submission jobs")
+
+			try:
+				if self._new_submission_frequency.seconds > 0:
+					logging.info(f"Beginning to attempt to schedule a new submission")
+					self.schedule_new_submission()
+			except:
+				logging.exception("Exception occurred while scheduling a new submission")
 
 			time.sleep(120)
 
@@ -76,11 +108,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		# Setup all the streams for inbox mentions, new comments and submissions
 		mentions = self._praw.inbox.mentions(limit=25)
 
-		# Main subreddit
-		# sr = self._praw.subreddit("subsimgpt2interactive")
-
-		# Testing subreddit talkwithgpt2bots
-		sr = self._praw.subreddit("talkwithgpt2bots")
+		sr = self._praw.subreddit(self._subreddit)
 		submissions = sr.stream.submissions(pause_after=0)
 		comments = sr.stream.comments(pause_after=0)
 
@@ -113,12 +141,12 @@ class RedditIO(threading.Thread, LogicMixin):
 
 					logging.info(f"Configuring a textgen job for {praw_thing.type} {praw_thing.name}")
 
-					prefix = self._collate_tagged_comment_history(praw_thing) + self._get_reply_tag(praw_thing)
+					prompt = self._collate_tagged_comment_history(praw_thing) + self._get_reply_tag(praw_thing)
 
-					if prefix:
-						# If a prefix was returned, we can go ahead and create the text generation parameters dict
+					if prompt:
+						# If a prompt was returned, we can go ahead and create the text generation parameters dict
 						text_generation_parameters = self._default_text_generation_parameters.copy()
-						text_generation_parameters['prefix'] = prefix
+						text_generation_parameters['prompt'] = prompt
 
 				# insert it into the database
 				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters)
@@ -127,13 +155,13 @@ class RedditIO(threading.Thread, LogicMixin):
 				if praw_thing.type == 'username_mention':
 					praw_thing.mark_read()
 
-	def post_outgoing_jobs(self):
+	def post_outgoing_reply_jobs(self):
 
-		for post_job in self.pending_post_jobs():
+		for post_job in self.pending_reply_jobs():
 
-			logging.info(f'Starting postjob {post_job.id}')
+			logging.info(f'Starting to post reply job {post_job.id} to reddit')
 
-			# Increment the post attempts counter. 
+			# Increment the post attempts counter.
 			# This is to prevent posting too many times if there are errors
 			post_job.reddit_post_attempts += 1
 			post_job.save()
@@ -157,13 +185,19 @@ class RedditIO(threading.Thread, LogicMixin):
 				logging.error(f'Could not get the source praw thing for {post_job.id}')
 				continue
 
+			reply_parameters = self.extract_reply_from_generated_text(\
+				post_job.text_generation_parameters['prompt'], post_job.generated_text, post_job.text_generation_parameters['truncate'])
+
+			if not reply_parameters:
+				logging.info(f"Reply body could not be found in generated text of job {post_job.id}")
+
 			# Remove the following line when you're 100% sure the model is ready to begin posting to reddit
 			# For testing, please use r/talkwithgpt2bots or r/testingground4bots/
 			# Check with mods on subsimgpt2interactive about getting your bot a *verified* flair
 			return
 
 			# Reply to the source thing with the generated text. A new praw_thing is returned
-			reply_praw_thing = source_praw_thing.reply(body=post_job.generated_text)
+			reply_praw_thing = source_praw_thing.reply(**reply_parameters)
 
 			# Add the new thing directly into the database,
 			# without text_gen parameters so that a new reply won't be started
@@ -172,6 +206,39 @@ class RedditIO(threading.Thread, LogicMixin):
 			# Set the name value of the reply that was posted, to finalize the job
 			post_job.posted_name = reply_praw_thing.name
 			post_job.save()
+
+			logging.info(f"Job {post_job.id} reply submitted successfully")
+
+	def post_outgoing_new_submission_jobs(self):
+
+		for post_job in self.pending_new_submission_jobs():
+
+			logging.info(f'Starting to post reply job {post_job.id} to reddit')
+
+			# Increment the post attempts counter.
+			# This is to prevent posting too many times if there are errors
+			post_job.reddit_post_attempts += 1
+			post_job.save()
+
+			if len(self._negative_keyword_matches(post_job.generated_text)) > 0:
+				# A negative keyword was found, so don't post this text back to reddit
+				continue
+
+			post_parameters = self.extract_submission_text_from_generated_text(\
+				post_job.text_generation_parameters['prompt'], post_job.generated_text)
+
+			if not post_parameters:
+				logging.info(f"Submission text could not be found in generated text of job {post_job.id}")
+				continue
+
+			post_parameters['flair_id'] = self._new_submission_flair_id
+
+			submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters)
+
+			post_job.posted_name = submission_praw_thing.name
+			post_job.save()
+
+			logging.info(f"Job {post_job.id} submission submitted successfully")
 
 	def set_thing_type(self, praw_thing):
 		# A little nasty but very useful...
@@ -220,10 +287,49 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		return db_Thing.create(**record_dict)
 
-	def pending_post_jobs(self):
-		# A list of Things from the database that have had text generated,
-		# but not a post attempt
+	def schedule_new_submission(self):
+		# Attempt to schedule a new submission
+		# Check that one has not been completed or in the process of, before submitting
+
+		# Filters for Things which have been submitted successfully or
+		# that are in the process of (ie attempts counter has not maxed out)
+		recent_submissions = list(db_Thing.select(db_Thing).where((db_Thing.posted_name.is_null(False)) | (db_Thing.text_generation_attempts < 3 & db_Thing.reddit_post_attempts < 1)).
+					where(fn.Lower(db_Thing.subreddit) == self._subreddit.lower()).
+					where(db_Thing.source_name == 't3_new_submission').
+					where((datetime.utcnow() - db_Thing.created_utc) < self._new_submission_frequency.seconds))
+
+		if recent_submissions:
+			return
+
+		logging.info(f"Scheduling a new submission on {self._subreddit}")
+
+		new_submission_thing = {}
+
+		new_submission_thing['source_name'] = 't3_new_submission'
+		new_submission_thing['subreddit'] = self._subreddit
+
+		text_generation_parameters = self._default_text_generation_parameters.copy()
+		text_generation_parameters['prompt'] = self._get_random_new_submission_tag()
+		text_generation_parameters['max_length'] = 1000
+
+		new_submission_thing['text_generation_parameters'] = text_generation_parameters
+
+		return db_Thing.create(**new_submission_thing)
+
+	def pending_reply_jobs(self):
+		# A list of Comment reply Things from the database that have had text generated,
+		# but not a reddit post attempt
 		return list(db_Thing.select(db_Thing).
+					where(db_Thing.source_name.startswith('t1_')).
+					where(db_Thing.reddit_post_attempts < 1).
+					where(db_Thing.generated_text.is_null(False)).
+					where(db_Thing.posted_name.is_null()))
+
+	def pending_new_submission_jobs(self):
+		# A list of pending Submission Things from the database that have had text generated,
+		# but not a reddit post attempt
+		return list(db_Thing.select(db_Thing).
+					where(db_Thing.source_name == 't3_new_submission').
 					where(db_Thing.reddit_post_attempts < 1).
 					where(db_Thing.generated_text.is_null(False)).
 					where(db_Thing.posted_name.is_null()))

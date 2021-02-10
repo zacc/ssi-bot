@@ -9,9 +9,9 @@ Untested:
 Mac/Windows variants (pull requests etc to enable support other OS are welcome)
 
 ### Glossary / PyPI packages used
-`gpt-2-simple` An open source Python package made by Max Wolff that is used for finetuning and generating text from the base GPT-2 model. It's a little outdated, but works effectively.
+`simpletransformers` An open source Python package made by Thilina Rajapakse. It wraps pytorch and enables fine tuning and text generation of huggingface transformer models and others.
 
-Github: https://github.com/minimaxir/gpt-2-simple/
+Documentation: https://simpletransformers.ai/docs/installation/
 
 `peewee` A database ORM that creates Python access to the database. SQL functions and queries can be completed using Python functions. It's like SQLAlchemy but much much easier to use!
 
@@ -57,12 +57,13 @@ The final finetuned model will reflect the data you have trained it with.
 In the `model_training/` folder are some scripts used to assist downloading reddit data from Pushshift (a reddit mirror) and outputting the training data.
 
 `download_reddit_training_data.py`
-This script downloads submission and comment JSON files from Pushshift and saves them to the hard disk.
+This script downloads submission and comment JSON files from Pushshift and saves them to the hard disk. It will take a long time due to the rate limiting on Pushshift.
 It then parses the JSON file and pushes it into a database.
 Putting the file into a database makes it easier to filter the data (by score, exclude NSFW, etc).
 
 `output_training_data.py`
-This script will output all of the data from the pushshift database into a text file for finetuning.
+This script will output all of the data from the pushshift database into two text files for finetuning.
+One text file is the training data and the other is a control sample used for evaluating the fine tuning process.
 
 Using the 124M GPT-2 model, at least 20mb of training data is preferred.
 With less than 20mb of data you are at risk of overfitting the model to the data.
@@ -73,9 +74,9 @@ The cheapest way to finetune the model is to use Google Colaboratory, which give
 
 We have prepared a Colaboratory notebook which can be copied for you to use.
 The instructions for finetuning continue inside the Colab notebook.
-https://colab.research.google.com/drive/1OYwVK2RuqD83jF08be_zglaUaAR3R6FT?usp=sharing
+https://colab.research.google.com/drive/1xAQDNZilolauTHy4he8xBQ0IP2G6LGqJ?usp=sharing
 
-A model trained for 4000-5000 steps is sufficient, but 10-20k is better.
+The optimum trained model will be saved in the best_model folder.
 
 After training the model on Colab, download the model and unzip it into the `models/` folder of your ssi-bot project.
 

@@ -24,6 +24,14 @@ class LogicMixin():
 		# It's just a straight reply
 		return '<|sor|>'
 
+	def _get_random_new_submission_tag(self):
+		# Selftext only returned for now
+		# while GPT-2 will generate link submissions, the URLs are usually 404s.
+		# This function is named to futureproof that
+		# return random.choice(['<|sols|><|sot|>', '<|soss|><|sot|>'])
+
+		return '<|soss|><|sot|>'
+
 	def _collate_tagged_comment_history(self, praw_thing, to_level=3):
 		"""
 		Loop backwards (upwards in reddit terms) from the praw_thing through the comment up x times,
@@ -80,7 +88,12 @@ class LogicMixin():
 	def calculate_reply_probability(self, praw_thing):
 		# Ths function contains all of the logic used for deciding whether to reply
 
-		if praw_thing.author.name.lower() == self._praw.user.me().name.lower():
+		if not praw_thing.author:
+			# If the praw_thing has been deleted the author will be None,
+			# don't proceed to attempt a reply. Usually we will have downloaded
+			# the praw_thing before it is deleted so this won't get hit often.
+			return 0
+		elif praw_thing.author.name.lower() == self._praw.user.me().name.lower():
 			# The incoming praw object's author is the bot, so we won't reply
 			return 0
 
@@ -167,6 +180,80 @@ class LogicMixin():
 		# work out the age of submission in hours
 		age_of_submission = (datetime.utcnow() - submission_created_utc).total_seconds() / 3600
 		# calculate rate of decay over 48 hours
-		rate_of_decay = 1 - (age_of_submission / 48)
+		rate_of_decay = max(0, 1 - (age_of_submission / 48))
 		# multiply the rate of decay by the reply probability
 		return reply_probability * rate_of_decay
+
+	def extract_reply_from_generated_text(self, prompt, generated_text, truncate):
+
+		# remove any cruft
+		generated_text = generated_text.replace('&amp;#x200B;\n', '')
+
+		# find the first instance of the end-of-comment tag, starting from the end of the prompt
+		index_of_truncate = generated_text.find(truncate, len(prompt))
+
+		if index_of_truncate == -1:
+			# the original truncate tag couldn't be found,
+			# but we'll still try and truncate the string at the last line break (end of paragraph)
+			# so that the text still looks clean.
+			index_of_truncate = generated_text.rfind("\\n")
+
+		if index_of_truncate == -1:
+			# still nothing could be found so just skip this one
+			# if this is hit often, increase the length of the generated text
+			logging.info("Truncate string not found")
+			return {}
+
+		# extract the text from between the prompt and the truncate point
+		reply_body = generated_text[len(prompt):index_of_truncate]
+		if reply_body:
+			return {'body': reply_body}
+
+		# Return nothing
+		return {}
+
+	def extract_submission_text_from_generated_text(self, prompt, generated_text):
+
+		# remove any cruft
+		generated_text = generated_text.replace('&amp;#x200B;\n', '')
+
+		title_start_tag = '<|sot|>'
+		title_end_tag = '<|eot|>'
+
+		idx_title_start = generated_text.find(title_start_tag)
+		idx_title_end = generated_text.find(title_end_tag)
+
+		if idx_title_start == -1 or idx_title_end == -1:
+			# There must be at least a complete title to make a submission
+			return {}
+
+		if generated_text.startswith('<|sols|>'):
+			submission_type = 'url'
+			maintext_start_tag = '<|sol|>'
+			maintext_end_tag = '<|eol|>'
+		elif generated_text.startswith('<|soss|>'):
+			submission_type = 'selftext'
+			maintext_start_tag = '<|sost|>'
+			maintext_end_tag = '<|eost|>'
+
+		# Find the start and end tags of the main text, starting from the end of the title
+		idx_maintext_start = generated_text.find(maintext_start_tag, idx_title_end)
+		idx_maintext_end = generated_text.find(maintext_end_tag, idx_title_end)
+
+		if idx_maintext_start != (idx_title_end + len(title_end_tag)):
+			# check that the main text immediately follows the title end
+			return {}
+
+		if idx_maintext_start == -1 or idx_maintext_end == -1:
+			# There must be a complete body (link or submission)
+			return {}
+
+		title = generated_text[idx_title_start + len(title_start_tag):idx_title_end]
+
+		if not (0 < len(title) < 300):
+			# Validate the title length is within reddit's range
+			return {}
+
+		maintext = generated_text[idx_maintext_start + len(maintext_start_tag):idx_maintext_end]
+
+		return {'title': title, submission_type: maintext}
