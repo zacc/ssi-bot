@@ -190,6 +190,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			if not reply_parameters:
 				logging.info(f"Reply body could not be found in generated text of job {post_job.id}")
+				continue
 
 			# Remove the following line when you're 100% sure the model is ready to begin posting to reddit
 			# For testing, please use r/talkwithgpt2bots or r/testingground4bots/
