@@ -326,7 +326,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		# A list of Comment reply Things from the database that have had text generated,
 		# but not a reddit post attempt
 		return list(db_Thing.select(db_Thing).
-					where(db_Thing.source_name.startswith('t1_')).
+					where(db_Thing.source_name != 't3_new_submission').
 					where(db_Thing.reddit_post_attempts < 1).
 					where(db_Thing.generated_text.is_null(False)).
 					where(db_Thing.posted_name.is_null()))
