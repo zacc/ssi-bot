@@ -52,6 +52,9 @@ class RedditIO(threading.Thread, LogicMixin):
 			'truncate': '<|eo',
 	}
 
+	_positive_keywords = []
+	_negative_keywords = []
+
 	def __init__(self):
 		threading.Thread.__init__(self)
 
@@ -61,8 +64,10 @@ class RedditIO(threading.Thread, LogicMixin):
 		self._config = ConfigParser()
 		self._config.read('ssi-bot.ini')
 
-		self._positive_keywords = self._config['DEFAULT']['positive_keywords'].lower().split(',')
-		self._negative_keywords = self._config['DEFAULT']['negative_keywords'].lower().split(',')
+		if self._config['DEFAULT']['positive_keywords']:
+			self._positive_keywords = self._config['DEFAULT']['positive_keywords'].lower().split(',')
+		if self._config['DEFAULT']['negative_keywords']:
+			self._negative_keywords = self._config['DEFAULT']['negative_keywords'].lower().split(',')
 
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini
