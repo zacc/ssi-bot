@@ -7,6 +7,7 @@ import json
 import threading
 
 from queue import Queue
+from typing import Generator, List, NoReturn, Type
 
 import requests
 from datetime import datetime, timedelta
@@ -14,14 +15,14 @@ from datetime import datetime, timedelta
 from db import (Comment as db_Comment, Submission as db_Submission)
 from db import create_tables
 
-start_date = datetime(2018, 1, 1)
-end_date = datetime(2020, 10, 19)
+start_date:datetime = datetime(2018, 1, 1)
+end_date:datetime= datetime(2020, 10, 19)
 
 
-def loop_between_dates(start_datetime, end_datetime):
+def loop_between_dates(start_datetime:datetime, end_datetime:datetime)->Generator[datetime,datetime]:
 	# yields start and end dates between the dates given
 	# at weekly intervals
-	time_interval = timedelta(weeks=1)
+	time_interval:Type(timedelta) = timedelta(weeks=1)
 
 	# Make sure the start_datetime is always a Monday by shifting the start back to monday
 	start_datetime = start_datetime - timedelta(days=start_datetime.weekday())
@@ -39,7 +40,7 @@ def loop_between_dates(start_datetime, end_datetime):
 		period_start_date = period_end_date
 
 
-def clean_text(text):
+def clean_text(text:str)->str:
 	# have to unescape it twice, for reason I don't fully understand
 	text = html.unescape(text)
 	text = html.unescape(text)
@@ -55,9 +56,9 @@ def clean_text(text):
 	return text
 
 
-def write_to_database(q):
+def write_to_database(q:Queue)->NoReturn:
 
-	counter = 0
+	counter:int = 0
 
 	while True:
 		json_filepath = q.get()
@@ -97,24 +98,24 @@ def write_to_database(q):
 		q.task_done()
 
 
-def main():
+def main()->None:
 
 	create_tables()
 
 	# Queue for the write to db thread to receive from
-	q = Queue()
+	q:Queue = Queue()
 
 	# The worker thread will run in the background copying files into the database
 	# even while we're still downloading new ones (saves time)
 	threading.Thread(target=write_to_database, args=(q,), daemon=True).start()
 
 	# which subreddits to download from
-	subreddits = []
+	subreddits:list = []
 
 	# limit of submissions to download (per loop period)
 	# Pushshift will only allow 100 per file, so use score/gilding/etc filtering to get the best quality submissions
 	# If you are combining multiple subreddits, you can reduce this number to reduce download time
-	submission_limit = 100
+	submission_limit:int = 100
 
 	for subreddit in subreddits:
 

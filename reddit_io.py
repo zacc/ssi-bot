@@ -4,6 +4,7 @@ import logging
 import random
 import threading
 import time
+from typing import Any, Dict, Generator, List, Optional, Sequence
 import regex as re
 
 from configparser import ConfigParser
@@ -23,14 +24,14 @@ class RedditIO(threading.Thread, LogicMixin):
 	Advised that praw can have problems with threads,
 	so decided to keep all praw tasks in one daemon
 	"""
-	daemon = True
-	name = "RedditIOThread"
+	daemon:bool = True
+	name:str = "RedditIOThread"
 
-	_praw = None
+	_praw:Any = None
 
-	_subreddit = 'talkwithgpt2bots'
+	_subreddit:str = 'talkwithgpt2bots'
 	# talkwithgpt2 flair_id
-	_new_submission_flair_id = '280fd64a-7f2d-11ea-b209-0e5a7423541b'
+	_new_submission_flair_id:str= '280fd64a-7f2d-11ea-b209-0e5a7423541b'
 
 	# When your bot is ready to go live, uncomment this line
 	# Currently multiple subreddits not supported
@@ -39,11 +40,11 @@ class RedditIO(threading.Thread, LogicMixin):
 	# _new_submission_flair_id = 'ff1e3b8e-a518-11ea-b87f-0e2836404d8b'
 
 	# Default is for new submissions to be disabled
-	_new_submission_frequency = timedelta(hours=0)
+	_new_submission_frequency:timedelta = timedelta(hours=0)
 	# Make a new submission every 26 hours
 	# _new_submission_frequency = timedelta(hours=26)
 
-	_default_text_generation_parameters = {
+	_default_text_generation_parameters:Dict[str,Any] = {
 			'max_length': 260,
 			'num_return_sequences': 1,
 			'prompt': None,
@@ -52,10 +53,10 @@ class RedditIO(threading.Thread, LogicMixin):
 			'truncate': '<|eo',
 	}
 
-	_positive_keywords = []
-	_negative_keywords = []
+	_positive_keywords:List[str] = []
+	_negative_keywords:List[str] = []
 
-	def __init__(self):
+	def __init__(self)->None:
 		threading.Thread.__init__(self)
 
 		# seed the random generator
@@ -73,7 +74,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		# this will automatically pick up the configuration from praw.ini
 		self._praw = praw.Reddit(config_interpolation="basic")
 
-	def run(self):
+	def run(self)->None:
 
 		# pick up incoming submissions, comments etc from reddit and submit jobs for them
 
@@ -108,14 +109,14 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			time.sleep(120)
 
-	def poll_incoming_streams(self):
+	def poll_incoming_streams(self)->None:
 
 		# Setup all the streams for inbox mentions, new comments and submissions
-		mentions = self._praw.inbox.mentions(limit=25)
+		mentions:Any = self._praw.inbox.mentions(limit=25)
 
-		sr = self._praw.subreddit(self._subreddit)
-		submissions = sr.stream.submissions(pause_after=0)
-		comments = sr.stream.comments(pause_after=0)
+		sr:Any = self._praw.subreddit(self._subreddit)
+		submissions:Any = sr.stream.submissions(pause_after=0)
+		comments:Any = sr.stream.comments(pause_after=0)
 
 		# Merge the streams in a single loop to DRY the code
 		for praw_thing in chain_listing_generators(mentions, submissions, comments):
@@ -160,7 +161,7 @@ class RedditIO(threading.Thread, LogicMixin):
 				if praw_thing.type == 'username_mention':
 					praw_thing.mark_read()
 
-	def post_outgoing_reply_jobs(self):
+	def post_outgoing_reply_jobs(self)->Any:
 
 		for post_job in self.pending_reply_jobs():
 
@@ -215,7 +216,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			logging.info(f"Job {post_job.id} reply submitted successfully")
 
-	def post_outgoing_new_submission_jobs(self):
+	def post_outgoing_new_submission_jobs(self)->None:
 
 		for post_job in self.pending_new_submission_jobs():
 
@@ -246,7 +247,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			logging.info(f"Job {post_job.id} submission submitted successfully")
 
-	def set_thing_type(self, praw_thing):
+	def set_thing_type(self, praw_thing:Any)->Any:
 		# A little nasty but very useful...
 		# furnish the praw_thing with type attribute
 		# that will help us DRY later in the code
@@ -258,7 +259,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		return praw_thing
 
-	def synchronize_bots_comments_submissions(self):
+	def synchronize_bots_comments_submissions(self)->Any:
 		# at first run, pick up Bot's own recent submissions and comments
 		# to 'sync' the database and prevent duplicate replies
 
@@ -277,13 +278,13 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		logging.info("Completed syncing the bot's own submissions/comments")
 
-	def is_praw_thing_in_database(self, praw_thing):
+	def is_praw_thing_in_database(self, praw_thing:Any)->Any:
 		# Note that this is using the prefixed reddit id, ie t3_, t1_
 		# do not mix it with the unprefixed version which is called id!
 		record = db_Thing.get_or_none(db_Thing.source_name == praw_thing.name)
 		return record
 
-	def insert_praw_thing_into_database(self, praw_thing, text_generation_parameters=None):
+	def insert_praw_thing_into_database(self, praw_thing:Any, text_generation_parameters:Any=None)->Any:
 		record_dict = {}
 		record_dict['source_name'] = praw_thing.name
 
@@ -293,7 +294,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		return db_Thing.create(**record_dict)
 
-	def schedule_new_submission(self):
+	def schedule_new_submission(self)->Optional[Any]:
 		# Attempt to schedule a new submission
 		# Check that one has not been completed or in the process of, before submitting
 
@@ -322,7 +323,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		return db_Thing.create(**new_submission_thing)
 
-	def pending_reply_jobs(self):
+	def pending_reply_jobs(self)->list:
 		# A list of Comment reply Things from the database that have had text generated,
 		# but not a reddit post attempt
 		return list(db_Thing.select(db_Thing).
@@ -331,7 +332,7 @@ class RedditIO(threading.Thread, LogicMixin):
 					where(db_Thing.generated_text.is_null(False)).
 					where(db_Thing.posted_name.is_null()))
 
-	def pending_new_submission_jobs(self):
+	def pending_new_submission_jobs(self)->list:
 		# A list of pending Submission Things from the database that have had text generated,
 		# but not a reddit post attempt
 		return list(db_Thing.select(db_Thing).
@@ -340,7 +341,7 @@ class RedditIO(threading.Thread, LogicMixin):
 					where(db_Thing.generated_text.is_null(False)).
 					where(db_Thing.posted_name.is_null()))
 
-	def _find_depth_of_comment(self, praw_comment):
+	def _find_depth_of_comment(self, praw_comment:Any)->int:
 		"""
 		Adapted from:
 		https://praw.readthedocs.io/en/latest/code_overview/models/comment.html#praw.models.Comment.parent
@@ -360,18 +361,18 @@ class RedditIO(threading.Thread, LogicMixin):
 				refresh_counter += 1
 		return depth_counter
 
-	def _positive_keyword_matches(self, text):
+	def _positive_keyword_matches(self, text)->List[str]:
 		if self._positive_keywords:
 			return [keyword for keyword in self._positive_keywords if re.search(r"\b{}\b".format(keyword), text, re.IGNORECASE)]
 		return []
 
-	def _negative_keyword_matches(self, text):
+	def _negative_keyword_matches(self, text)->List[str]:
 		if self._negative_keywords:
 			return [keyword for keyword in self._negative_keywords if re.search(r"\b{}\b".format(keyword), text, re.IGNORECASE)]
 		return []
 
 
-def chain_listing_generators(*iterables):
+def chain_listing_generators(*iterables:Sequence)->Generator[Any]:
 	# Special tool for chaining PRAW's listing generators
 	# It joins the three iterables together so that we can DRY
 	for it in iterables:

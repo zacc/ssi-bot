@@ -1,10 +1,11 @@
 import time
+from typing import Any
 
 from peewee import Model, IntegerField, TextField, TimestampField
 from playhouse.sqlite_ext import JSONField
 from playhouse.sqliteq import SqliteQueueDatabase
 
-db = SqliteQueueDatabase('bot-db.sqlite3', pragmas={'journal_mode': 'wal', 'foreign_keys': 1})
+db:Any = SqliteQueueDatabase('bot-db.sqlite3', pragmas={'journal_mode': 'wal', 'foreign_keys': 1})
 
 
 class Thing(Model):
@@ -43,7 +44,7 @@ class Thing(Model):
 		database = db
 
 
-def create_db_tables():
+def create_db_tables()->None:
 
 	db.create_tables(models=[Thing])
 	# these stop/start calls are required

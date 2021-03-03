@@ -6,6 +6,7 @@ import threading
 import time
 
 from configparser import ConfigParser
+from typing import Any, List
 
 from simpletransformers.language_generation import LanguageGenerationModel
 
@@ -16,10 +17,10 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class ModelTextGenerator(threading.Thread):
 
-	daemon = True
-	name = "MTGThread"
+	daemon:bool = True
+	name:str = "MTGThread"
 
-	_config = None
+	_config:Any = None
 
 	def __init__(self):
 		threading.Thread.__init__(self)
@@ -65,7 +66,7 @@ class ModelTextGenerator(threading.Thread):
 			except:
 				logging.exception("Generating text for a job failed")
 
-	def top_pending_jobs(self):
+	def top_pending_jobs(self)->list:
 		"""
 		Get a list of text that need text to be generated, by treating
 		each database Thing record as a 'job'.
@@ -80,17 +81,17 @@ class ModelTextGenerator(threading.Thread):
 					order_by(db_Thing.created_utc)
 		return list(query)
 
-	def generate_text(self, text_generation_parameters):
+	def generate_text(self, text_generation_parameters:Any):
 
-		start_time = time.time()
+		start_time:Any = time.time()
 
 		# pop the prompt out from the args
-		prompt = text_generation_parameters.pop('prompt')
+		prompt:Any = text_generation_parameters.pop('prompt')
 
-		output_list = self._model.generate(prompt=prompt, args=text_generation_parameters)
+		output_list:List[Any] = self._model.generate(prompt=prompt, args=text_generation_parameters)
 
-		end_time = time.time()
-		duration = round(end_time - start_time, 1)
+		end_time:Any = time.time()
+		duration:Any = round(end_time - start_time, 1)
 
 		logging.info(f'{len(output_list)} sample(s) of text generated in {duration} seconds.')
 

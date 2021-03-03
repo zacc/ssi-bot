@@ -2,6 +2,7 @@
 import logging
 
 from datetime import datetime
+from typing import Any, Literal, Union
 
 from praw.models import (Submission as praw_Submission, Comment as praw_Comment)
 
@@ -14,7 +15,7 @@ class LogicMixin():
 	while taking updates on the main classes.
 	"""
 
-	def _get_reply_tag(self, praw_thing):
+	def _get_reply_tag(self, praw_thing:Any)->str:
 		"""
 		Get the reply tag to use.
 		The model will generate text after this reply tag.
@@ -25,7 +26,7 @@ class LogicMixin():
 		# It's just a straight reply
 		return '<|sor|>'
 
-	def _get_random_new_submission_tag(self):
+	def _get_random_new_submission_tag(self)->str:
 		# Selftext only returned for now
 		# while GPT-2 will generate link submissions, the URLs are usually 404s.
 		# This function is named to futureproof that
@@ -33,7 +34,7 @@ class LogicMixin():
 
 		return '<|soss|><|sot|>'
 
-	def _collate_tagged_comment_history(self, praw_thing, to_level=3):
+	def _collate_tagged_comment_history(self, praw_thing:Any, to_level:int=3)->str:
 		"""
 		Loop backwards (upwards in reddit terms) from the praw_thing through the comment up x times,
 		tagging the content text in the same way as the training data is
@@ -45,9 +46,9 @@ class LogicMixin():
 		titles, replies and so forth.
 
 		"""
-		counter = 0
-		prefix = ''
-		loop_thing = praw_thing
+		counter:int = 0
+		prefix:str = ''
+		loop_thing:Any = praw_thing
 
 		while loop_thing and counter < to_level:
 			if isinstance(loop_thing, praw_Submission):
@@ -86,7 +87,7 @@ class LogicMixin():
 
 		return prefix
 
-	def calculate_reply_probability(self, praw_thing):
+	def calculate_reply_probability(self, praw_thing:Any)->Union[float,Literal[0,1]]:
 		# Ths function contains all of the logic used for deciding whether to reply
 
 		if not praw_thing.author:
@@ -99,9 +100,9 @@ class LogicMixin():
 			return 0
 
 		# merge the text content into a single variable so it's easier to work with
-		thing_text_content = ''
-		submission_link_flair_text = ''
-		submission_created_utc = None
+		thing_text_content:str = ''
+		submission_link_flair_text:str = ''
+		submission_created_utc:Any = None
 
 		if praw_thing.type == 'submission':
 			# object is a submission that has title and selftext
@@ -185,13 +186,13 @@ class LogicMixin():
 		# multiply the rate of decay by the reply probability
 		return reply_probability * rate_of_decay
 
-	def extract_reply_from_generated_text(self, prompt, generated_text, truncate):
+	def extract_reply_from_generated_text(self, prompt, generated_text:str, truncate:str)->dict:
 
 		# remove any cruft
 		generated_text = generated_text.replace('&amp;#x200B;\n', '')
 
 		# find the first instance of the end-of-comment tag, starting from the end of the prompt
-		index_of_truncate = generated_text.find(truncate, len(prompt))
+		index_of_truncate:int = generated_text.find(truncate, len(prompt))
 
 		if index_of_truncate == -1:
 			# the original truncate tag couldn't be found,
@@ -206,23 +207,23 @@ class LogicMixin():
 			return {}
 
 		# extract the text from between the prompt and the truncate point
-		reply_body = generated_text[len(prompt):index_of_truncate]
+		reply_body:str = generated_text[len(prompt):index_of_truncate]
 		if reply_body:
 			return {'body': reply_body}
 
 		# Return nothing
 		return {}
 
-	def extract_submission_text_from_generated_text(self, prompt, generated_text):
+	def extract_submission_text_from_generated_text(self, prompt:Any, generated_text:str)->list:
 
 		# remove any cruft
 		generated_text = generated_text.replace('&amp;#x200B;\n', '')
 
-		title_start_tag = '<|sot|>'
-		title_end_tag = '<|eot|>'
+		title_start_tag:str = '<|sot|>'
+		title_end_tag:str = '<|eot|>'
 
-		idx_title_start = generated_text.find(title_start_tag)
-		idx_title_end = generated_text.find(title_end_tag)
+		idx_title_start:int = generated_text.find(title_start_tag)
+		idx_title_end:int = generated_text.find(title_end_tag)
 
 		if idx_title_start == -1 or idx_title_end == -1:
 			# There must be at least a complete title to make a submission
@@ -238,8 +239,8 @@ class LogicMixin():
 			maintext_end_tag = '<|eost|>'
 
 		# Find the start and end tags of the main text, starting from the end of the title
-		idx_maintext_start = generated_text.find(maintext_start_tag, idx_title_end)
-		idx_maintext_end = generated_text.find(maintext_end_tag, idx_title_end)
+		idx_maintext_start:int = generated_text.find(maintext_start_tag, idx_title_end)
+		idx_maintext_end:int = generated_text.find(maintext_end_tag, idx_title_end)
 
 		if idx_maintext_start != (idx_title_end + len(title_end_tag)):
 			# check that the main text immediately follows the title end
@@ -255,6 +256,6 @@ class LogicMixin():
 			# Validate the title length is within reddit's range
 			return {}
 
-		maintext = generated_text[idx_maintext_start + len(maintext_start_tag):idx_maintext_end]
+		maintext:str = generated_text[idx_maintext_start + len(maintext_start_tag):idx_maintext_end]
 
 		return {'title': title, submission_type: maintext}

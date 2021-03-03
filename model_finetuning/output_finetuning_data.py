@@ -2,6 +2,7 @@
 import random
 
 from datetime import datetime
+from typing import Any, List, NoReturn, Optional
 
 from peewee import fn
 
@@ -11,7 +12,7 @@ import concurrent.futures
 
 # a list of common bots to ignore the comments of. They will pollute the training data with junk.
 # unless you want that, of course..
-author_blacklist = ['automoderator', 'nfl_mod', 'totesmessenger', 'haikubot-1911', 'gfy_mirror', 'should_have_listened',
+author_blacklist:List[str] = ['automoderator', 'nfl_mod', 'totesmessenger', 'haikubot-1911', 'gfy_mirror', 'should_have_listened',
 	'nice-scores', 'repliesnice', 'redditstreamable', 'twittertostreamable', 'streamablemirrors', 'originalpostsearcher',
 	'b0trank', 'vredditdownloader', 'tweetposter', 'link-reply-bot', 'clickablelinkbot', 'i-am-dad-bot', 'GitHubPermalinkBot',
 	'Freedom_Unit_Bot', 'LearnProgramming_Bot', 'CodeFormatHelperBot']
@@ -19,12 +20,12 @@ author_blacklist = ['automoderator', 'nfl_mod', 'totesmessenger', 'haikubot-1911
 # A list of bad words. If these words are in the reddit comment, ignore that comment
 # A good way to get the bot to behave nicely is to finetune it on healthy content in the first place
 # There is usually always enough training data to comfortably filter out junk content like this
-negative_keywords = []
+negative_keywords:List[str] = []
 
-text_removed = ['[removed]', '[deleted]']
+text_removed:List[str] = ['[removed]', '[deleted]']
 
 
-def gather_comments_for_submission(sub):
+def gather_comments_for_submission(sub:Any)->Optional[str]:
 
 	if any(s in sub.selftext for s in negative_keywords):
 		# if the submission contains a negative keyword, 
@@ -43,7 +44,7 @@ def gather_comments_for_submission(sub):
 		return
 
 	# pick out all of the comments in this submission(topic) ordered by the highest score, descending
-	top_rated_comments = list(db_Comment.select().where((db_Comment.link_id == f't3_{sub.id}') &
+	top_rated_comments:List[Any] = list(db_Comment.select().where((db_Comment.link_id == f't3_{sub.id}') &
 		(fn.Lower(db_Comment.author.not_in(author_blacklist)))).order_by(db_Comment.score.desc()))
 
 	for tr_comment in top_rated_comments:
@@ -60,8 +61,8 @@ def gather_comments_for_submission(sub):
 			# Otherwise it is a link submission (ie just a title and URL)
 			text_gen_string = "<|eols|>"
 
-		ancestor = tr_comment
-		comments_counted = 0
+		ancestor:Any = tr_comment
+		comments_counted:int = 0
 
 		# From the top rated comment, we'll loop back up the comment thread until
 		# we reach the submission
@@ -106,16 +107,16 @@ def gather_comments_for_submission(sub):
 			return text_gen_string
 
 
-def main():
+def main()->NoReturn:
 
 	random.seed()
 
-	bot_name = "training_output"
+	bot_name:str = "training_output"
 
 	# Insert the names of the subreddits
-	training_subreddits = []
+	training_subreddits:List[Any] = []
 
-	all_submissions = []
+	all_submissions:List[Any] = []
 	# all submissions ordered by date
 	all_submissions = list(db_Submission.select().
 		where((fn.Lower(db_Submission.subreddit).in_([s.lower() for s in training_subreddits])) &
@@ -127,19 +128,19 @@ def main():
 	# of the training
 	random.shuffle(all_submissions)
 
-	split_point = int(len(all_submissions) * 0.9)
-	training_submissions = all_submissions[:split_point]
-	eval_submissions = all_submissions[split_point:]
+	split_point:int = int(len(all_submissions) * 0.9)
+	training_submissions:Any = all_submissions[:split_point]
+	eval_submissions:Any = all_submissions[split_point:]
 
 	print(f'{len(training_submissions)} training submissions, {len(eval_submissions)} evaluation submissions')
 
 	# file name for the output text file
-	date_string = datetime.today().strftime('%d%m%y_%H%M')
-	counter = 0
+	date_string:datetime = datetime.today().strftime('%d%m%y_%H%M')
+	counter:int = 0
 
 	# use concurrent futures (multiprocessing) to speed up the output
 	with concurrent.futures.ProcessPoolExecutor() as executor:
-		filename = f'{bot_name}_{date_string}_training.txt'
+		filename:str = f'{bot_name}_{date_string}_training.txt'
 
 		with open(filename, 'a', encoding='utf-8') as fd:
 			for sub, output_text_gen_string in zip(training_submissions, executor.map(gather_comments_for_submission, training_submissions)):

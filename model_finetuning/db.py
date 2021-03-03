@@ -3,11 +3,12 @@
 import logging
 import os
 import time
+from typing import Any, List, Type, TypeVar, Union
 
 from peewee import *
 
-db_file_path = os.path.join('pushshift.sqlite3')
-db_instance = SqliteDatabase(db_file_path, thread_safe=True, pragmas={'journal_mode': 'wal2', 'foreign_keys': 0})
+db_file_path:str = os.path.join('pushshift.sqlite3')
+db_instance:Any = SqliteDatabase(db_file_path, thread_safe=True, pragmas={'journal_mode': 'wal2', 'foreign_keys': 0})
 
 
 class Submission(Model):
@@ -29,7 +30,7 @@ class Submission(Model):
 	url = TextField(null=True)
 
 	@property
-	def combined_text(self):
+	def combined_text(self)->str:
 		# A property that combines the title and selftext
 		# For link
 		return f'{self.title} {self.selftext}'.strip()
@@ -37,7 +38,7 @@ class Submission(Model):
 	class Meta:
 		database = db_instance
 
-
+TComment=TypeVar('TComment',bound='Comment')
 class Comment(Model):
 
 	author = TextField()
@@ -51,7 +52,7 @@ class Comment(Model):
 	score = IntegerField()
 	stickied = BooleanField(default=False)
 
-	def parent(self):
+	def parent(self)->Union[Type[Submission],TComment,None]:
 		# This function gets the parent Comment or Submission
 		# and is useful for traversing up the comment tree
 		try:
@@ -63,7 +64,7 @@ class Comment(Model):
 			# TODO probably should raise an Exception here
 			return None
 
-	def submission(self):
+	def submission(self)->Type[Submission]:
 		return Submission.get_by_id(self.link_id[3:])
 
 	class Meta:
@@ -75,5 +76,5 @@ class Comment(Model):
 
 def create_tables():
 
-	table_list = [Submission, Comment]
+	table_list:List[Type[Submission],Type[Comment]] = [Submission, Comment]
 	db_instance.create_tables(models=table_list)
