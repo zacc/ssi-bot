@@ -145,7 +145,7 @@ def main():
 			for sub, output_text_gen_string in zip(training_submissions, executor.map(gather_comments_for_submission, training_submissions)):
 				counter += 1
 				if output_text_gen_string:
-					fd.write(f'{output_text_gen_string}' + '\n')
+					fd.write(f'{output_text_gen_string}' + '<|endoftext|>\n')
 				print(f'subs counted: {counter}. {round(counter/len(all_submissions), 2)}')
 
 		filename = f'{bot_name}_{date_string}_eval.txt'
@@ -153,7 +153,7 @@ def main():
 			for sub, output_text_gen_string in zip(eval_submissions, executor.map(gather_comments_for_submission, eval_submissions)):
 				counter += 1
 				if output_text_gen_string:
-					fd.write(f'{output_text_gen_string}' + '\n')
+					fd.write(f'{output_text_gen_string}' + '<|endoftext|>\n')
 				print(f'subs counted: {counter}. {round(counter/len(all_submissions), 2)}')
 
 
