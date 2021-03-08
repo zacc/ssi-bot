@@ -7,7 +7,7 @@ from reddit_io import RedditIO
 from db import create_db_tables
 
 
-def main():
+def main()->None:
 
 	# enable minimal logging
 	logging.basicConfig(level=logging.INFO)
@@ -16,7 +16,7 @@ def main():
 	create_db_tables()
 
 	# initialise reddit_io
-	reddit_io = RedditIO()
+	reddit_io:RedditIO = RedditIO()
 	# synchronize bot's own posts to the databse
 	reddit_io.synchronize_bots_comments_submissions()
 
@@ -25,7 +25,7 @@ def main():
 	reddit_io.start()
 
 	# Start the text generation daemon
-	mtg = ModelTextGenerator()
+	mtg:ModelTextGenerator = ModelTextGenerator()
 	mtg.start()
 
 	# Set up a game loop
