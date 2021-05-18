@@ -302,9 +302,10 @@ class RedditIO(threading.Thread, LogicMixin):
 		recent_submissions = list(db_Thing.select(db_Thing).where((db_Thing.posted_name.is_null(False)) | (db_Thing.text_generation_attempts < 3 & db_Thing.reddit_post_attempts < 1)).
 					where(fn.Lower(db_Thing.subreddit) == self._subreddit.lower()).
 					where(db_Thing.source_name == 't3_new_submission').
-					where((datetime.utcnow() - db_Thing.created_utc) < self._new_submission_frequency.seconds))
+					where((datetime.timestamp(datetime.utcnow()) - db_Thing.created_utc) < self._new_submission_frequency.total_seconds()))
 
 		if recent_submissions:
+			# There was a submission recently so we cannot proceed.
 			return
 
 		logging.info(f"Scheduling a new submission on {self._subreddit}")
