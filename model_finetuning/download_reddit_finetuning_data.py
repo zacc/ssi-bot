@@ -46,12 +46,6 @@ def clean_text(text):
 	# Strip and whitespace off of the end
 	text = text.strip()
 
-	# add a period to the end of the line, if a proper line closure does not exist
-	# This help GPT-2 know the end of the sentence.
-	if len(text) > 1:
-		if text[-1].isalnum():
-			text = text + '.'
-
 	return text
 
 
