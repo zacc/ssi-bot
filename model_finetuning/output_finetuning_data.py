@@ -42,9 +42,9 @@ def gather_comments_for_submission(sub):
 		print(f"author blacklist {sub.author}")
 		return
 
-	# pick out all of the comments in this submission(topic) ordered by the highest score, descending
+	# pick out all of the comments in this submission(topic)
 	top_rated_comments = list(db_Comment.select().where((db_Comment.link_id == f't3_{sub.id}') &
-		(fn.Lower(db_Comment.author.not_in(author_blacklist)))).order_by(db_Comment.score.desc()))
+		(fn.Lower(db_Comment.author.not_in(author_blacklist)))))
 
 	for tr_comment in top_rated_comments:
 		# Here, we will start to create a string representation of the reddit submission, with all comments in a thread
@@ -119,8 +119,7 @@ def main():
 	# all submissions ordered by date
 	all_submissions = list(db_Submission.select().
 		where((fn.Lower(db_Submission.subreddit).in_([s.lower() for s in training_subreddits])) &
-				(fn.Lower(db_Submission.author).not_in([a.lower() for a in author_blacklist]))
-				& (db_Submission.score > 1)))
+				(fn.Lower(db_Submission.author).not_in([a.lower() for a in author_blacklist]))))
 
 	# We'll shuffle all the submission records and split them into a training and evaluation
 	# lists in a 90/10 ratio. simpletransformers will use the evaluation to test the accuracy
