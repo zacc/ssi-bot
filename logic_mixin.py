@@ -153,10 +153,10 @@ class LogicMixin():
 		if (any(kw in (praw_thing.author_flair_text or '').lower() for kw in ['gpt-2'])
 				or praw_thing.author.name.lower()[-3:] in ['ssi', 'bot']):
 			# bot flair, or the last 3 characters of the author signify a bot
-			base_probability += 0.01
+			base_probability += -0.1
 		else:
 			# assume humanoid if author metadata doesn't meet the criteria for a bot
-			base_probability += 0.2
+			base_probability += 0.3
 
 		if len(self._positive_keyword_matches(thing_text_content)) > 0:
 			# A positive keyword was found, increase probability of replying
@@ -165,14 +165,14 @@ class LogicMixin():
 		if praw_thing.type == 'submission':
 			# it's a brand new submission and the bot can
 			# comment at the top level and get some exposure..
-			base_probability += 0.2
+			base_probability += 0.4
 
 		if praw_thing.type == 'comment':
 			if praw_thing.parent().author == self._praw.user.me().name:
 				# the post prior to this is by the bot
 				base_probability += 0.1
 
-			if any(kw in praw_thing.body for kw in ['?', ' you']):
+			if any(kw.lower() in praw_thing.body.lower() for kw in ['?', ' you']):
 				# any interrogative terms in the comment,
 				# an increased reply probability
 				base_probability += 0.3
