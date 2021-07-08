@@ -33,7 +33,7 @@ class LogicMixin():
 
 		return '<|soss|><|sot|>'
 
-	def _collate_tagged_comment_history(self, praw_thing, to_level=3):
+	def _collate_tagged_comment_history(self, praw_thing, to_level=6):
 		"""
 		Loop backwards (upwards in reddit terms) from the praw_thing through the comment up x times,
 		tagging the content text in the same way as the training data is
@@ -60,7 +60,7 @@ class LogicMixin():
 					# it's a link submission
 					tagged_text = f"<|sols|><|sot|>{loop_thing.title}<|eot|><|sol|>{loop_thing.selftext}<|eol|>"
 
-				if len(tagged_text + prefix) > 3000:
+				if len(tagged_text + prefix) > 1500:
 					# If the prefix becomes too long, the model text generation will break
 					# Break the while loop here and just return whatever prefix we have
 					break
@@ -74,7 +74,7 @@ class LogicMixin():
 				# just a normal <|sor|>
 				tagged_text = f'<|sor|>{loop_thing.body}<|eor|>'
 
-				if len(tagged_text + prefix) > 3000:
+				if len(tagged_text + prefix) > 1500:
 					# If the prefix becomes too long, the model text generation will break
 					# Break the while loop here and just return whatever prefix we have
 					break
@@ -83,6 +83,11 @@ class LogicMixin():
 
 			loop_thing = loop_thing.parent()
 			counter += 1
+
+		if len(prefix) > 1500:
+			# The model can handle 1024 tokens, but a token is not just one character.
+			# Just truncate the long string to be safe and hope for the best :)
+			return prefix[:-1450]
 
 		return prefix
 
