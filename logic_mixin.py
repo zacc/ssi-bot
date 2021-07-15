@@ -87,7 +87,7 @@ class LogicMixin():
 		if len(prefix) > 1500:
 			# The model can handle 1024 tokens, but a token is not just one character.
 			# Just truncate the long string to be safe and hope for the best :)
-			return prefix[:-1450]
+			return prefix[-1450:]
 
 		return prefix
 
