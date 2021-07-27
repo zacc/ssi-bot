@@ -203,6 +203,10 @@ class LogicMixin():
 			# but we'll still try and truncate the string at the last line break (end of paragraph)
 			# so that the text still looks clean.
 			index_of_truncate = generated_text.rfind("\\n")
+		if index_of_truncate == -1:
+			# in case trained model do not output tags and put lot !!!!! at the end,
+			# This change allows this messages without need of end tags
+			index_of_truncate = generated_text.find("!!!!")
 
 		if index_of_truncate == -1:
 			# still nothing could be found so just skip this one
