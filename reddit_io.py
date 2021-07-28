@@ -357,7 +357,14 @@ class RedditIO(threading.Thread, LogicMixin):
 			depth_counter += 1
 			ancestor = ancestor.parent()
 			if refresh_counter % 9 == 0:
-				ancestor.refresh()
+				try:
+					ancestor.refresh()
+				except praw.exceptions.ClientException:
+					# An error can occur if a message is missing for some reason.
+					# To keep the bot alive, return early.
+					logging.exception("Exception when counting the comment depth. returning early.")
+					return depth_counter
+
 				refresh_counter += 1
 		return depth_counter
 
