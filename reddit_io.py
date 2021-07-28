@@ -28,9 +28,9 @@ class RedditIO(threading.Thread, LogicMixin):
 
 	_praw = None
 
-	_subreddit = 'talkwithgpt2bots'
+	#_subreddit = 'talkwithgpt2bots'
 	# talkwithgpt2 flair_id
-	_new_submission_flair_id = '280fd64a-7f2d-11ea-b209-0e5a7423541b'
+	#_new_submission_flair_id = '280fd64a-7f2d-11ea-b209-0e5a7423541b'
 
 	# When your bot is ready to go live, uncomment this line
 	# Currently multiple subreddits not supported
@@ -39,7 +39,7 @@ class RedditIO(threading.Thread, LogicMixin):
 	# _new_submission_flair_id = 'ff1e3b8e-a518-11ea-b87f-0e2836404d8b'
 
 	# Default is for new submissions to be disabled
-	_new_submission_frequency = timedelta(hours=0)
+	#_new_submission_frequency = timedelta(hours=0)
 	# Make a new submission every 26 hours
 	# _new_submission_frequency = timedelta(hours=26)
 
@@ -52,6 +52,9 @@ class RedditIO(threading.Thread, LogicMixin):
 			'truncate': '<|eo',
 	}
 
+	_subreddit = None
+	_new_submission_flair_id = None
+	_new_submission_frequency = None
 	_positive_keywords = []
 	_negative_keywords = []
 
@@ -68,6 +71,23 @@ class RedditIO(threading.Thread, LogicMixin):
 			self._positive_keywords = self._config['DEFAULT']['positive_keywords'].lower().split(',')
 		if self._config['DEFAULT']['negative_keywords']:
 			self._negative_keywords = self._config['DEFAULT']['negative_keywords'].lower().split(',')
+		if self._config['DEFAULT']['subreddit']:
+			self._subreddit = self._config['DEFAULT']['subreddit']
+		else:
+			logging.warning("Missing value of 'subreddit' in ini! Subreddit has been set to the default of r/test!")
+			# not sure about this one. maybe we should use somewhere more gpt2 specific?
+			self._subreddit = "test"
+		if self._config['DEFAULT']['submission_flair_id']:
+			self._new_submission_flair_id = self._config['DEFAULT']['submission_flair_id']
+		else:
+			logging.warning("Missing value of 'submission_flair_id' in ini! Post frequency has been set to the default of none!")
+			# lets hope the code gods accept this :p
+			self._new_submission_flair_id = ""
+		if self._config['DEFAULT']['post_frequency']:
+			self._new_submission_frequency = timedelta(hours=int(self._config['DEFAULT']['post_frequency']))
+		else:
+			logging.warning("Missing value of 'post_frequency' in ini! Post frequency has been set to the default of 0!")
+			self._new_submission_frequency = timedelta(hours=0)
 
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini
