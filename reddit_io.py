@@ -82,7 +82,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		else:
 			logging.warning("Missing value of 'submission_flair_id' in ini! Post frequency has been set to the default of none!")
 			# lets hope the code gods accept this :p
-			self._new_submission_flair_id = ""
+			self._new_submission_flair_id = None
 		if self._config['DEFAULT']['post_frequency']:
 			self._new_submission_frequency = timedelta(hours=int(self._config['DEFAULT']['post_frequency']))
 		else:
