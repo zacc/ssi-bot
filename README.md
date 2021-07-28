@@ -59,13 +59,18 @@ In the `model_training/` folder are some scripts used to assist downloading redd
 This script downloads submission and comment JSON files from Pushshift and saves them to the hard disk. It will take a long time due to the rate limiting on Pushshift.
 It then parses the JSON file and pushes it into a database.
 Putting the file into a database makes it easier to filter the data (by score, exclude NSFW, etc).
+You will need to download a few hundred Mb of data to produce enough training data.
 
 `output_training_data.py`
 This script will output all of the data from the pushshift database into two text files for finetuning.
 One text file is the training data and the other is a control sample used for evaluating the fine tuning process.
 
-Using the 124M GPT-2 model, at least 20mb of training data is preferred.
-With less than 20mb of data you are at risk of overfitting the model to the data.
+Using the 124M GPT-2 model, at least 10mb of training data is preferred.
+With less than 10mb of data you are at risk of overfitting the model to the data and you won't get good results.
+
+`Google Query`
+Some people have used Google Query to download the training data faster. You'll need to write your own script to output the data into the same structure of the output_training_data.py script.
+
 
 ### Finetuning on Google Colaboratory
 
