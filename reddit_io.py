@@ -52,9 +52,9 @@ class RedditIO(threading.Thread, LogicMixin):
 			'truncate': '<|eo',
 	}
 
-	_subreddit = None
+	_subreddit = 'test'
 	_new_submission_flair_id = None
-	_new_submission_frequency = None
+	_new_submission_frequency = 0
 	_positive_keywords = []
 	_negative_keywords = []
 
@@ -74,20 +74,15 @@ class RedditIO(threading.Thread, LogicMixin):
 		if self._config['DEFAULT']['subreddit']:
 			self._subreddit = self._config['DEFAULT']['subreddit']
 		else:
-			logging.warning("Missing value of 'subreddit' in ini! Subreddit has been set to the default of r/test!")
-			# not sure about this one. maybe we should use somewhere more gpt2 specific?
-			self._subreddit = "test"
+			logging.warning(f"Missing value of 'subreddit' in ini! Subreddit has been set to the default of r/{self._subreddit}!")
 		if self._config['DEFAULT']['submission_flair_id']:
 			self._new_submission_flair_id = self._config['DEFAULT']['submission_flair_id']
 		else:
-			logging.warning("Missing value of 'submission_flair_id' in ini! Post frequency has been set to the default of none!")
-			# lets hope the code gods accept this :p
-			self._new_submission_flair_id = None
+			logging.warning(f"Missing value of 'submission_flair_id' in ini! The flair ID has been set to the default of {self._new_submission_flair_id}!")
 		if self._config['DEFAULT']['post_frequency']:
 			self._new_submission_frequency = timedelta(hours=int(self._config['DEFAULT']['post_frequency']))
 		else:
-			logging.warning("Missing value of 'post_frequency' in ini! Post frequency has been set to the default of 0!")
-			self._new_submission_frequency = timedelta(hours=0)
+			logging.warning(f"Missing value of 'post_frequency' in ini! Post frequency has been set to the default of {self._new_submission_frequency}!")
 
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini
