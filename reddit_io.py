@@ -72,11 +72,12 @@ class RedditIO(threading.Thread, LogicMixin):
 		if self._config['DEFAULT']['negative_keywords']:
 			self._negative_keywords = self._config['DEFAULT']['negative_keywords'].lower().split(',')
 		if self._config['DEFAULT']['subreddit']:
-			self._subreddit = self._config['DEFAULT']['subreddit']
+			self._subreddit = self._config['DEFAULT']['subreddit'].strip()
 		else:
 			logging.warning(f"Missing value of 'subreddit' in ini! Subreddit has been set to the default of r/{self._subreddit}!")
 		if self._config['DEFAULT']['submission_flair_id']:
 			self._new_submission_flair_id = self._config['DEFAULT']['submission_flair_id']
+			#print(self._new_submission_flair_id)
 		else:
 			logging.warning(f"Missing value of 'submission_flair_id' in ini! The flair ID has been set to the default of {self._new_submission_flair_id}!")
 		if self._config['DEFAULT']['post_frequency']:
