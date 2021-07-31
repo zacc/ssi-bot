@@ -28,21 +28,6 @@ class RedditIO(threading.Thread, LogicMixin):
 
 	_praw = None
 
-	#_subreddit = 'talkwithgpt2bots'
-	# talkwithgpt2 flair_id
-	#_new_submission_flair_id = '280fd64a-7f2d-11ea-b209-0e5a7423541b'
-
-	# When your bot is ready to go live, uncomment this line
-	# Currently multiple subreddits not supported
-	# _subreddit = 'subsimgpt2interactive'
-	# subsimgpt2interactive flair_id
-	# _new_submission_flair_id = 'ff1e3b8e-a518-11ea-b87f-0e2836404d8b'
-
-	# Default is for new submissions to be disabled
-	#_new_submission_frequency = timedelta(hours=0)
-	# Make a new submission every 26 hours
-	# _new_submission_frequency = timedelta(hours=26)
-
 	_default_text_generation_parameters = {
 			'max_length': 260,
 			'num_return_sequences': 1,
