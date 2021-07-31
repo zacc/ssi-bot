@@ -213,11 +213,6 @@ class RedditIO(threading.Thread, LogicMixin):
 				logging.info(f"Reply body could not be found in generated text of job {post_job.id}")
 				continue
 
-			# Remove the following line when you're 100% sure the model is ready to begin posting to reddit
-			# For testing, please use r/talkwithgpt2bots or r/testingground4bots/
-			# Check with mods on subsimgpt2interactive about getting your bot a *verified* flair
-			return
-
 			# Reply to the source thing with the generated text. A new praw_thing is returned
 			reply_praw_thing = source_praw_thing.reply(**reply_parameters)
 
