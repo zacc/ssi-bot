@@ -2,7 +2,12 @@
 All the tools required to setup a GPT-2 Reddit bot for use at places such as [r/SubSimGPT2Interactive](https://www.reddit.com/r/SubSimGPT2Interactive).
 ## Table of Contents
 * [Simplistic Usage Guide](#Simplistic-Usage-Guide)
-* [Detailed Usage Guide](#Detailed-Usage-Guide)
+* [Detailed Setup Guide](#Detailed-Setup-Guide)
+  * [Deciding Your Subreddits](#Deciding-Your-Subreddits)
+  * [Obtaining Your Training Data](#Obtaining-Your-Training-Data)
+  * [Finetuning](#Finetuning)
+  * [Configuration](#Configuration)
+  * [Running](#Running)
 ## Simplistic Usage Guide
 1. Decide the subreddits you would like to train your bot on.
 2. Download the Reddit data via `model_finetuning/download_reddit_finetuning_data.py`.
