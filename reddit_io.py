@@ -28,21 +28,6 @@ class RedditIO(threading.Thread, LogicMixin):
 
 	_praw = None
 
-	_subreddit = 'talkwithgpt2bots'
-	# talkwithgpt2 flair_id
-	_new_submission_flair_id = '280fd64a-7f2d-11ea-b209-0e5a7423541b'
-
-	# When your bot is ready to go live, uncomment this line
-	# Currently multiple subreddits not supported
-	# _subreddit = 'subsimgpt2interactive'
-	# subsimgpt2interactive flair_id
-	# _new_submission_flair_id = 'ff1e3b8e-a518-11ea-b87f-0e2836404d8b'
-
-	# Default is for new submissions to be disabled
-	_new_submission_frequency = timedelta(hours=0)
-	# Make a new submission every 26 hours
-	# _new_submission_frequency = timedelta(hours=26)
-
 	_default_text_generation_parameters = {
 			'max_length': 260,
 			'num_return_sequences': 1,
@@ -52,6 +37,9 @@ class RedditIO(threading.Thread, LogicMixin):
 			'truncate': '<|eo',
 	}
 
+	_subreddit = 'test'
+	_new_submission_flair_id = None
+	_new_submission_frequency = 0
 	_positive_keywords = []
 	_negative_keywords = []
 
@@ -68,6 +56,19 @@ class RedditIO(threading.Thread, LogicMixin):
 			self._positive_keywords = self._config['DEFAULT']['positive_keywords'].lower().split(',')
 		if self._config['DEFAULT']['negative_keywords']:
 			self._negative_keywords = self._config['DEFAULT']['negative_keywords'].lower().split(',')
+		if self._config['DEFAULT']['subreddit']:
+			self._subreddit = self._config['DEFAULT']['subreddit'].strip()
+		else:
+			logging.warning(f"Missing value of 'subreddit' in ini! Subreddit has been set to the default of r/{self._subreddit}!")
+		if self._config['DEFAULT']['submission_flair_id']:
+			self._new_submission_flair_id = self._config['DEFAULT']['submission_flair_id']
+			#print(self._new_submission_flair_id)
+		else:
+			logging.warning(f"Missing value of 'submission_flair_id' in ini! The flair ID has been set to the default of {self._new_submission_flair_id}!")
+		if self._config['DEFAULT']['post_frequency']:
+			self._new_submission_frequency = timedelta(hours=int(self._config['DEFAULT']['post_frequency']))
+		else:
+			logging.warning(f"Missing value of 'post_frequency' in ini! Post frequency has been set to the default of {self._new_submission_frequency}!")
 
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini
@@ -196,11 +197,6 @@ class RedditIO(threading.Thread, LogicMixin):
 			if not reply_parameters:
 				logging.info(f"Reply body could not be found in generated text of job {post_job.id}")
 				continue
-
-			# Remove the following line when you're 100% sure the model is ready to begin posting to reddit
-			# For testing, please use r/talkwithgpt2bots or r/testingground4bots/
-			# Check with mods on subsimgpt2interactive about getting your bot a *verified* flair
-			return
 
 			# Reply to the source thing with the generated text. A new praw_thing is returned
 			reply_praw_thing = source_praw_thing.reply(**reply_parameters)
