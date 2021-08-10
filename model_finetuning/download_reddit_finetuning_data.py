@@ -107,6 +107,7 @@ def main():
 	subreddits = []
 	start_date = [2018, 1, 1]
 	end_date = [2021, 8, 9]
+	min_comments = 1
 
 	# limit of submissions to download (per loop period)
 	# Pushshift will only allow 100 per file, so use score/gilding/etc filtering to get the best quality submissions
@@ -122,6 +123,8 @@ def main():
 		subreddits = config['DEFAULT']['subreddits'].split(',')
 	if config['DEFAULT']['submission_limit']:
 		submission_limit = config['DEFAULT']['submission_limit']
+	if config['DEFAULT']['min_comments']:
+		min_comments = int(config['DEFAULT']['min_comments'])
 
 	# reassign date variables to datetime object
 	start_date = datetime(start_date[0], start_date[1], start_date[2])
@@ -179,8 +182,8 @@ def main():
 					# Sometimes the json['data'] can be empty
 					continue
 
-				if submission_json_item['num_comments'] == 0:
-					# ignore submissions with no comments
+				if submission_json_item['num_comments'] < min_comments:
+					# ignore submissions with less comments than the minimum
 					continue
 
 				if 'selftext' not in submission_json_item:
