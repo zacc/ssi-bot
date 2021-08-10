@@ -5,9 +5,14 @@ from datetime import datetime
 
 from peewee import fn
 
+from configparser import ConfigParser
+
 from db import (Comment as db_Comment, Submission as db_Submission)
 
 import concurrent.futures
+
+config = ConfigParser()
+config.read('dataset.ini')
 
 # a list of common bots to ignore the comments of. They will pollute the training data with junk.
 # unless you want that, of course..
@@ -21,6 +26,16 @@ author_blacklist = ['automoderator', 'nfl_mod', 'totesmessenger', 'haikubot-1911
 # There is usually always enough training data to comfortably filter out junk content like this
 negative_keywords = []
 
+# The name of the subreddits trained from
+training_subreddits = []
+
+# Pull configs from dataset.ini
+if config['DEFAULT']['subreddits']:
+	training_subreddits = config['DEFAULT']['subreddits'].split(',')
+if config['DEFAULT']['negative_keywords']:
+	negative_keywords = config['DEFAULT']['negative_keywords'].split(',')
+
+# Keywords to be stripped from the dataset output
 text_removed = ['[removed]', '[deleted]']
 
 
@@ -111,9 +126,6 @@ def main():
 	random.seed()
 
 	bot_name = "training_output"
-
-	# Insert the names of the subreddits
-	training_subreddits = []
 
 	all_submissions = []
 	# all submissions ordered by date
