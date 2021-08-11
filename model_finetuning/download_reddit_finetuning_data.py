@@ -105,8 +105,8 @@ def main():
 
 	# dataset subreddits, start date, and end date
 	subreddits = []
-	start_date = [2018, 1, 1]
-	end_date = [2021, 8, 9]
+	start_date = '2018-01-01'
+	end_date = '2021-08-09'
 	min_comments = 1
 
 	# limit of submissions to download (per loop period)
@@ -116,9 +116,9 @@ def main():
 
 	# pull configs from dataset.ini
 	if config['DEFAULT']['start_date']:
-		start_date = [int(i) for i in config['DEFAULT']['start_date'].split(',')]
+		start_date = config['DEFAULT']['start_date']
 	if config['DEFAULT']['end_date']:
-		end_date = [int(i) for i in config['DEFAULT']['end_date'].split(',')]
+		end_date = config['DEFAULT']['end_date']
 	if config['DEFAULT']['subreddits']:
 		subreddits = config['DEFAULT']['subreddits'].split(',')
 	if config['DEFAULT']['submission_limit']:
@@ -127,8 +127,8 @@ def main():
 		min_comments = int(config['DEFAULT']['min_comments'])
 
 	# reassign date variables to datetime object
-	start_date = datetime(start_date[0], start_date[1], start_date[2])
-	end_date = datetime(end_date[0], end_date[1], end_date[2])
+	start_date = datetime.fromisoformat(start_date)
+	end_date = datetime.fromisoformat(end_date)
 
 	for subreddit in subreddits:
 
