@@ -14,9 +14,8 @@ model_name = "gpt2"
 # if set to False, training will occur exclusively on the CPU without multiprocessing (this will be EXTREMELY slow but will work on more systems)
 use_gpu = False
 
-
-currentDateTime = datetime.now()
-bot_label = "bot_" + currentDateTime.strftime("%d%m%Y_%H%M")
+current_date_time = datetime.now()
+bot_label = "bot_" + current_date_time.strftime("%d%m%Y_%H%M")
 
 args = {
     "overwrite_output_dir": True,
@@ -32,8 +31,8 @@ args = {
     # Sliding window will help it manage very long bits of text in memory
     "sliding_window": True,
     "max_seq_length": 512,
-
-		"mlm": False, # has to be false for gpt-2
+	
+    "mlm": False, # has to be false for gpt-2
 
     "evaluate_during_training": True,
     # default 2000, will save by default at this step.
