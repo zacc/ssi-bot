@@ -31,7 +31,7 @@ args = {
     # Sliding window will help it manage very long bits of text in memory
     "sliding_window": True,
     "max_seq_length": 512,
-	
+
     "mlm": False, # has to be false for gpt-2
 
     "evaluate_during_training": True,
