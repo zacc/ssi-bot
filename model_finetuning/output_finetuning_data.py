@@ -30,8 +30,8 @@ negative_keywords = []
 training_subreddits = []
 
 # Pull configs from dataset.ini
-if config['DEFAULT']['subreddits']:
-	training_subreddits = config['DEFAULT']['subreddits'].split(',')
+if config['DEFAULT']['training_subreddits']:
+	training_subreddits = config['DEFAULT']['training_subreddits'].split(',')
 if config['DEFAULT']['negative_keywords']:
 	negative_keywords = config['DEFAULT']['negative_keywords'].split(',')
 

@@ -104,7 +104,7 @@ def main():
 	threading.Thread(target=write_to_database, args=(q,), daemon=True).start()
 
 	# dataset subreddits, start date, and end date
-	subreddits = []
+	training_subreddits = []
 	start_date = '2018-01-01'
 	end_date = '2021-08-09'
 	min_comments = 1
@@ -119,10 +119,10 @@ def main():
 		start_date = config['DEFAULT']['start_date']
 	if config['DEFAULT']['end_date']:
 		end_date = config['DEFAULT']['end_date']
-	if config['DEFAULT']['subreddits']:
-		subreddits = config['DEFAULT']['subreddits'].split(',')
+	if config['DEFAULT']['training_subreddits']:
+		training_subreddits = config['DEFAULT']['training_subreddits'].split(',')
 	if config['DEFAULT']['submission_limit']:
-		submission_limit = config['DEFAULT']['submission_limit']
+		submission_limit = int(config['DEFAULT']['submission_limit'])
 	if config['DEFAULT']['min_comments']:
 		min_comments = int(config['DEFAULT']['min_comments'])
 
@@ -130,7 +130,7 @@ def main():
 	start_date = datetime.fromisoformat(start_date)
 	end_date = datetime.fromisoformat(end_date)
 
-	for subreddit in subreddits:
+	for subreddit in training_subreddits:
 
 		# check that the output dir exists, if not create it
 		output_dir = f'json_data/{subreddit}'
