@@ -30,5 +30,5 @@ TODO
 TODO
 ## Additional Notes
 #### Major PyPi Packages Used
-`simpletransformers` - A PyTorch and `transformer` based library, enabling higher level fine-tuning and text generation APIs.
+`simpletransformers` - A PyTorch and `transformer` based library, enabling higher level fine-tuning and text generation APIs.  
 	https://simpletransformers.ai
