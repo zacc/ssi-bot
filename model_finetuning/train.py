@@ -51,7 +51,7 @@ args = {
     "use_multiprocessing": use_gpu, # set to false when not using a gpu due to instability (often throws RuntimeErrors)
 
     "output_dir": f"{bot_label}/",
-		"best_model_dir": f"{bot_label}/best_model",
+    "best_model_dir": f"{bot_label}/best_model",
 }
 
 model = LanguageModelingModel(model_type, model_name, use_cuda=use_gpu)
