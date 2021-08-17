@@ -39,7 +39,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 	_subreddit = 'test'
 	_new_submission_flair_id = None
-	_new_submission_frequency = 0
+	_new_submission_frequency = timedelta(hours=0)
 	_positive_keywords = []
 	_negative_keywords = []
 
@@ -293,15 +293,24 @@ class RedditIO(threading.Thread, LogicMixin):
 		# Attempt to schedule a new submission
 		# Check that one has not been completed or in the process of, before submitting
 
-		# Filters for Things which have been submitted successfully or
-		# that are in the process of (ie attempts counter has not maxed out)
-		recent_submissions = list(db_Thing.select(db_Thing).where((db_Thing.posted_name.is_null(False)) | (db_Thing.text_generation_attempts < 3 & db_Thing.reddit_post_attempts < 1)).
-					where(fn.Lower(db_Thing.subreddit) == self._subreddit.lower()).
+		# First, find all new submissions for this subreddit that fall within the new submission timeframe
+		all_recent_new_submissions = (db_Thing.select(db_Thing).where(fn.Lower(db_Thing.subreddit) == self._subreddit.lower()).
 					where(db_Thing.source_name == 't3_new_submission').
-					where((datetime.timestamp(datetime.utcnow()) - db_Thing.created_utc) < self._new_submission_frequency.total_seconds()))
+					where(db_Thing.created_utc > (datetime.utcnow() - self._new_submission_frequency)))
 
-		if recent_submissions:
-			# There was a submission recently so we cannot proceed.
+		# Extend the first query to filter successful submissions
+		recent_successful_submissions = list(all_recent_new_submissions.where(db_Thing.posted_name.is_null(False)))
+
+		if recent_successful_submissions:
+			logging.info(f"A submission was made within the last {self._new_submission_frequency} on {self._subreddit}")
+			return
+
+		# Extend the first query to find ones that are still being processed and not yet submitted
+		recent_pending_submissions = list(all_recent_new_submissions.where(db_Thing.posted_name.is_null()).
+			where((db_Thing.text_generation_attempts < 3) & (db_Thing.reddit_post_attempts < 1)))
+
+		if recent_pending_submissions:
+			logging.info("A submission for {self._subreddit} is still being processed in the queue")
 			return
 
 		logging.info(f"Scheduling a new submission on {self._subreddit}")
