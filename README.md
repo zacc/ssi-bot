@@ -53,7 +53,7 @@ It will also learn average length of text and so on, so training data with short
 The final finetuned model will reflect the data you have trained it with.
 
 ### Scripts to help you prepare training data
-In the `model_training/` folder are some scripts used to assist downloading reddit data from Pushshift (a reddit mirror) and outputting the training data.
+In the `model_finetuning/` folder are some scripts used to assist downloading reddit data from Pushshift (a reddit mirror) and outputting the training data.
 
 `download_reddit_training_data.py`
 This script downloads submission and comment JSON files from Pushshift and saves them to the hard disk. It will take a long time due to the rate limiting on Pushshift.
@@ -67,6 +67,8 @@ One text file is the training data and the other is a control sample used for ev
 
 Using the 124M GPT-2 model, at least 10mb of training data is preferred.
 With less than 10mb of data you are at risk of overfitting the model to the data and you won't get good results.
+
+To use these scripts, copy `dataset_template.ini` to `dataset.ini` and configure it accordingly.
 
 `Google Query`
 Some people have used Google Query to download the training data faster. You'll need to write your own script to output the data into the same structure of the output_training_data.py script.
