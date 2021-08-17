@@ -19,6 +19,11 @@ from db import create_tables
 config = ConfigParser()
 config.read('dataset.ini')
 
+verbose = False
+
+if config['DEFAULT']['verbose']:
+	verbose = config['DEFAULT']['verbose'] == 'True'
+
 def loop_between_dates(start_datetime, end_datetime):
 	# yields start and end dates between the dates given
 	# at weekly intervals
@@ -52,8 +57,6 @@ def clean_text(text):
 
 def write_to_database(q):
 
-	counter = 0
-
 	while True:
 		json_filepath = q.get()
 
@@ -74,8 +77,8 @@ def write_to_database(q):
 					json_item['body'] = clean_text(json_item['body'])
 
 					db_record = db_Comment.create(**json_item)
-					print(f"comment {json_item['id']} written to database")
-					counter += 1
+					if verbose:
+						print(f"comment {json_item['id']} written to database")
 
 			elif 'selftext' in json_item:
 				# if 'selftext' is present then assume it's a submission
@@ -86,13 +89,15 @@ def write_to_database(q):
 					json_item['selftext'] = clean_text(json_item['selftext'])
 
 					db_record = db_Submission.create(**json_item)
-					print(f"submission {json_item['id']} written to database")
-					counter += 1
+					if verbose:
+						print(f"submission {json_item['id']} written to database")
 
 		q.task_done()
 
 
 def main():
+	
+	print("starting download, use Ctrl+C to pause at any point in the process")
 
 	create_tables()
 
@@ -130,6 +135,11 @@ def main():
 	start_date = datetime.fromisoformat(start_date)
 	end_date = datetime.fromisoformat(end_date)
 
+	date_range = end_date.timestamp() - start_date.timestamp()
+
+	# the maximum number of times to retry a request from a non-200 status code before giving up and moving on
+	max_attempts = 3
+
 	for subreddit in training_subreddits:
 
 		# check that the output dir exists, if not create it
@@ -139,32 +149,54 @@ def main():
 
 		for start, end in loop_between_dates(start_date, end_date):
 
+			
+			time_delta = (end.timestamp() - start_date.timestamp()) / date_range
+
+			print(f"downloading submission data from {start.date()} to {end.date()}... {round(time_delta * 100, 2)}%")
+
+			submission_attempt = 0
+			submission_success = False
+
 			submission_output_path = f"json_data/{subreddit}/{subreddit}_submissions_{int(start.timestamp())}.json"
 
 			if not os.path.isfile(submission_output_path):
-				print(f"submission does not exist on the disk; starting to download {submission_output_path}")
+				if verbose:
+					print(f"submission does not exist on the disk; starting to download {submission_output_path}")
 				# The file already exists so just skip ahead in the loop
 
 				# Get the top (x) number of submissions for that period.
 				submission_search_link = ('https://api.pushshift.io/reddit/submission/search/'
-							   '?subreddit={}&after={}&before={}&stickied=0&sort_type=score&sort=desc&limit={}&mod_removed=0')
+							'?subreddit={}&after={}&before={}&stickied=0&sort_type=score&sort=desc&limit={}&mod_removed=0')
 				submission_search_link = submission_search_link.format(subreddit, int(start.timestamp()), int(end.timestamp()), submission_limit)
 
-				submission_response = requests.get(submission_search_link)
+				while submission_attempt < max_attempts and not submission_success:
 
-				if submission_response.status_code != 200:
-					# the response was not OK, skip writing the file
-					continue
+					submission_attempt += 1
 
-				with open(submission_output_path, "w") as f:
-					f.write(submission_response.text)
+					submission_response = requests.get(submission_search_link)
 
-				time.sleep(0.1)
+					if submission_response.status_code != 200:
+						if submission_attempt >= max_attempts:
+							print(f"Request error! Could not download submission date, status code {submission_response.status_code}")
+						elif verbose:
+							print(f"Request error! Status code {submission_response.status_code}, retrying (attempt {submission_attempt} of {max_attempts})")
+						time.sleep(0.4) # give it a little bit more time if the request was not successful
+						continue
+					else:
+						submission_success = True
+
+					with open(submission_output_path, "w") as f:
+						f.write(submission_response.text)
+
+					time.sleep(0.1)
 
 			else:
-				print(f"{submission_output_path} file exists on the disk, skipping download")
+				if verbose:
+					print(f"{submission_output_path} file exists on the disk, skipping download")
 				# The file already exists, but we'll go forwards and
 				# check the comment files, download if required
+
+			if not submission_success: continue
 
 			# Put the submission path into the queue to write into the database
 			q.put(submission_output_path)
@@ -194,31 +226,46 @@ def main():
 					# ignore submissions that have no content
 					continue
 
+				comment_attempt = 0
+				comment_success = False
+
 				comment_output_path = f"json_data/{subreddit}/{subreddit}_{submission_json_item['id']}_comment.json"
 
 				if not os.path.isfile(comment_output_path):
-					print(f"{comment_output_path} does not exist on the disk, downloading...")
+					if verbose:
+						print(f"{comment_output_path} does not exist on the disk, downloading...")
 					# print(submission_json_item)
 					comment_search_link = ('https://api.pushshift.io/reddit/comment/search/'
-								   '?subreddit={}&link_id={}&sort_type=created_utc&sort=asc')
+								'?subreddit={}&link_id={}&sort_type=created_utc&sort=asc')
 					comment_search_link = comment_search_link.format(subreddit, submission_json_item['id'])
 
-					comment_response = requests.get(comment_search_link)
+					while comment_attempt < max_attempts and not comment_success:
 
-					if comment_response.status_code != 200:
-						# the response was not OK, skip writing the file
-						continue
+						comment_attempt += 1
 
-					with open(comment_output_path, "w") as f:
-						f.write(comment_response.text)
+						comment_response = requests.get(comment_search_link)
+						
+						if comment_response.status_code != 200:
+							if comment_attempt >= max_attempts:
+								print(f"Request error! Could not download comment data, status code {comment_response.status_code}")
+							elif verbose:
+								print(f"Request error! Status code {comment_response.status_code}, retrying (attempt {comment_attempt} of {max_attempts})")
+							time.sleep(0.4)
+							continue
+						else:
+							comment_success = True
 
-					# Have to sleep a bit here or else pushshift will start to block our requests
-					time.sleep(0.05)
+						with open(comment_output_path, "w") as f:
+							f.write(comment_response.text)
+
+						# Have to sleep a bit here or else pushshift will start to block our requests
+						time.sleep(0.05)
 
 				# Put it into the queue to write into the database
 				q.put(comment_output_path)
 
 	q.join()
+	print("finished!")
 
 if __name__ == '__main__':
 	main()
