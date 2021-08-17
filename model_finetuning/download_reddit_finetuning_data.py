@@ -11,12 +11,13 @@ from queue import Queue
 import requests
 from datetime import datetime, timedelta
 
+from configparser import ConfigParser
+
 from db import (Comment as db_Comment, Submission as db_Submission)
 from db import create_tables
 
-start_date = datetime(2018, 1, 1)
-end_date = datetime(2020, 10, 19)
-
+config = ConfigParser()
+config.read('dataset.ini')
 
 def loop_between_dates(start_datetime, end_datetime):
 	# yields start and end dates between the dates given
@@ -102,15 +103,34 @@ def main():
 	# even while we're still downloading new ones (saves time)
 	threading.Thread(target=write_to_database, args=(q,), daemon=True).start()
 
-	# which subreddits to download from
-	subreddits = []
+	# dataset subreddits, start date, and end date
+	training_subreddits = []
+	start_date = '2018-01-01'
+	end_date = '2021-08-09'
+	min_comments = 1
 
 	# limit of submissions to download (per loop period)
 	# Pushshift will only allow 100 per file, so use score/gilding/etc filtering to get the best quality submissions
 	# If you are combining multiple subreddits, you can reduce this number to reduce download time
 	submission_limit = 100
 
-	for subreddit in subreddits:
+	# pull configs from dataset.ini
+	if config['DEFAULT']['start_date']:
+		start_date = config['DEFAULT']['start_date']
+	if config['DEFAULT']['end_date']:
+		end_date = config['DEFAULT']['end_date']
+	if config['DEFAULT']['training_subreddits']:
+		training_subreddits = config['DEFAULT']['training_subreddits'].split(',')
+	if config['DEFAULT']['submission_limit']:
+		submission_limit = int(config['DEFAULT']['submission_limit'])
+	if config['DEFAULT']['min_comments']:
+		min_comments = int(config['DEFAULT']['min_comments'])
+
+	# reassign date variables to datetime object
+	start_date = datetime.fromisoformat(start_date)
+	end_date = datetime.fromisoformat(end_date)
+
+	for subreddit in training_subreddits:
 
 		# check that the output dir exists, if not create it
 		output_dir = f'json_data/{subreddit}'
@@ -162,8 +182,8 @@ def main():
 					# Sometimes the json['data'] can be empty
 					continue
 
-				if submission_json_item['num_comments'] == 0:
-					# ignore submissions with no comments
+				if submission_json_item['num_comments'] < min_comments:
+					# ignore submissions with less comments than the minimum
 					continue
 
 				if 'selftext' not in submission_json_item:

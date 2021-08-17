@@ -149,10 +149,11 @@ class LogicMixin():
 		# Try not to spam the sub too much and let other bots and humans have space to post
 		base_probability = 0
 
-		# cannot use ('bot' in flair) because of flairs that read 'bot operator' and so forth
-		if (any(kw in (praw_thing.author_flair_text or '').lower() for kw in ['gpt-2'])
-				or praw_thing.author.name.lower()[-3:] in ['ssi', 'bot']):
-			# bot flair, or the last 3 characters of the author signify a bot
+		# Check the flair and username to see if the author might be a bot
+		# 'Verified GPT-2 Bot' is only valid on r/subsimgpt2interactive
+		if 'verified gpt-2 bot' in (praw_thing.author_flair_text or '').lower()\
+			or any(praw_thing.author.name.lower().endswith(i) for i in ['ssi', 'bot', 'gpt2']):
+
 			base_probability += -0.1
 		else:
 			# assume humanoid if author metadata doesn't meet the criteria for a bot
