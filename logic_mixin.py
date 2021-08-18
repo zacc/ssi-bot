@@ -147,7 +147,7 @@ class LogicMixin():
 		# From here we will start to calculate the probability cumulatively
 		# Adjusting the weights here will change how frequently the bot will post
 		# Try not to spam the sub too much and let other bots and humans have space to post
-		base_probability = 0
+		base_probability = -0.2
 
 		# Check the flair and username to see if the author might be a bot
 		# 'Verified GPT-2 Bot' is only valid on r/subsimgpt2interactive
@@ -180,7 +180,7 @@ class LogicMixin():
 
 			if praw_thing.submission.author == self._praw.user.me().name:
 				# the submission is by the author, and favor that
-				base_probability += 0.1
+				base_probability += 0.3
 
 		reply_probability = min(base_probability, 1)
 
