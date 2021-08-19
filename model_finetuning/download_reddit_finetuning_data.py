@@ -22,7 +22,7 @@ config.read('dataset.ini')
 verbose = False
 
 if config['DEFAULT']['verbose']:
-	verbose = config['DEFAULT']['verbose'] == 'True'
+	verbose = config['DEFAULT'].getboolean('verbose')
 
 def loop_between_dates(start_datetime, end_datetime):
 	# yields start and end dates between the dates given
