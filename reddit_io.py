@@ -310,7 +310,7 @@ class RedditIO(threading.Thread, LogicMixin):
 			where((db_Thing.text_generation_attempts < 3) & (db_Thing.reddit_post_attempts < 1)))
 
 		if recent_pending_submissions:
-			logging.info("A submission for {self._subreddit} is still being processed in the queue")
+			logging.info(f"A submission for {self._subreddit} is still being processed in the queue")
 			return
 
 		logging.info(f"Scheduling a new submission on {self._subreddit}")
