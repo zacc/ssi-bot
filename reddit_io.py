@@ -222,7 +222,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		for post_job in self.pending_new_submission_jobs():
 
-			logging.info(f'Starting to post reply job {post_job.id} to reddit')
+			logging.info(f'Starting to post new submission job {post_job.id} to reddit')
 
 			# Increment the post attempts counter.
 			# This is to prevent posting too many times if there are errors
@@ -235,11 +235,6 @@ class RedditIO(threading.Thread, LogicMixin):
 				# A negative keyword was found, so don't post this text back to reddit
 				continue
 
-			if generated_text.startswith('<|sols|>'):
-				submission_type = 'url'
-			elif generated_text.startswith('<|soss|>'):
-				submission_type = 'selftext'
-
 			post_parameters = self.extract_submission_text_from_generated_text(\
 				post_job.text_generation_parameters['prompt'], generated_text)
 
@@ -247,19 +242,40 @@ class RedditIO(threading.Thread, LogicMixin):
 				logging.info(f"Submission text could not be found in generated text of job {post_job.id}")
 				continue
 
-			if submission_type == 'url':
-				image_url = self.find_image_url_for_search_string(post_parameters['title'])
-
-				if not image_url:
-					logging.info(f"Could not get an image for the submission: {post_parameters['title']}")
-					continue
-
-				post_parameters['url'] = image_url
-
 			post_parameters['flair_id'] = self._new_submission_flair_id
 
-			# Post the submission to reddit
-			submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters)
+			if generated_text.startswith('<|sols|>'):
+				# Get a list of images that match the search string
+				image_urls = self.find_image_urls_for_search_string(post_parameters['title'])
+
+				if not image_urls:
+					logging.info(f"Could not get any images for the submission: {post_parameters['title']}")
+					continue
+
+				for image_url in image_urls:
+					post_parameters['url'] = image_url
+
+					try:
+						# Post the submission to reddit
+						submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters)
+						break
+
+					except praw.exceptions.RedditAPIException as e:
+						if 'DOMAIN_BANNED' in str(e):
+							# continue and try again with another image_url
+							continue
+						# Otherwise raise the exception
+						raise e
+
+			elif generated_text.startswith('<|soss|>'):
+
+				# Post the submission to reddit
+				submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters)
+
+			if not submission_praw_thing:
+				# no submission has been made
+				logging.info(f"Failed to make a submission for job {post_job.id}")
+				continue
 
 			post_job.posted_name = submission_praw_thing.name
 			post_job.save()

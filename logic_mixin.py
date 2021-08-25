@@ -279,8 +279,10 @@ class LogicMixin():
 
 		return return_dict
 
-	def find_image_url_for_search_string(self, search_string):
-		logging.info(f"Searching on Bing for an image for "{search_string}"")
+	def find_image_urls_for_search_string(self, search_string, limit=3):
+		logging.info(f"Searching on Bing for an image for: \"{search_string}\"")
+
+		return_list = []
 
 		# Truncate to the first 10 words to improve effectiveness of the search
 		search_parameters = {'q': ' '.join(search_string.split()[:10]), 'FORM': 'HDRSC2'}
@@ -293,11 +295,14 @@ class LogicMixin():
 		r = requests.get(search_url, headers=header)
 		soup = BeautifulSoup(r.text, 'html.parser')
 
-		link_results = soup.find("a", {"class": "iusc"})
+		link_results = soup.find_all("a", {"class": "iusc"})
 
-		if link_results.has_attr('m'):
-			m = json.loads(link_results["m"])
-			logging.info(f"Found an image: {m['murl']}")
-			return m['murl']
+		for link in link_results:
+			if link.has_attr('m'):
+				# convert json in the link's attributes into a python dict
+				m = json.loads(link["m"])
+				if 'murl' in m:
+					return_list.append(m['murl'])
 
-		logging.info("Could not find an image on Bing")
+		logging.info(f"Found {len(return_list)} images")
+		return return_list[:limit]
