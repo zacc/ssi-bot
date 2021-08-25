@@ -41,6 +41,8 @@ class RedditIO(threading.Thread, LogicMixin):
 	_new_submission_flair_id = None
 	_new_submission_frequency = timedelta(hours=0)
 	_image_post_frequency = 0
+	_image_post_search_prefix = ''
+
 	_positive_keywords = []
 	_negative_keywords = []
 
@@ -76,6 +78,9 @@ class RedditIO(threading.Thread, LogicMixin):
 			self._image_post_frequency = self._config['DEFAULT'].getfloat('image_post_frequency')
 		else:
 			logging.warning(f"Missing value of 'image_post_frequency' in ini! Image post frequency has been set to the default of {self._image_post_frequency}!")
+
+		if self._config['DEFAULT']['image_post_search_prefix']:
+			self._image_post_search_prefix = self._config['DEFAULT']['image_post_search_prefix']
 
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini

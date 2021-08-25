@@ -280,12 +280,23 @@ class LogicMixin():
 		return return_dict
 
 	def find_image_urls_for_search_string(self, search_string, limit=3):
+
 		logging.info(f"Searching on Bing for an image for: \"{search_string}\"")
 
 		return_list = []
 
 		# Truncate to the first 10 words to improve effectiveness of the search
-		search_parameters = {'q': ' '.join(search_string.split()[:10]), 'FORM': 'HDRSC2'}
+		search_terms = ' '.join(search_string.split()[:10])
+
+		# If it exists, add the prefix to improve results
+		if self._image_post_search_prefix:
+			search_parameters = self._image_post_search_prefix + ' ' + search_terms
+
+		# Collect and encode all search url parameters
+		search_parameters = {'q': search_terms,
+							'FORM': 'HDRSC2',
+							'safeSearch': 'strict'}
+
 		query_string = urllib.parse.urlencode(search_parameters)
 
 		# Use Win10 Edge User Agent
@@ -305,5 +316,5 @@ class LogicMixin():
 					if 'murl' in m:
 						return_list.append(m['murl'])
 
-		logging.info(f"Found {len(return_list)} images")
+		logging.info(f"Found {len(return_list)} images, returning top {limit}")
 		return return_list[:limit]
