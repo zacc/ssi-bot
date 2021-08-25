@@ -40,6 +40,7 @@ class RedditIO(threading.Thread, LogicMixin):
 	_subreddit = 'test'
 	_new_submission_flair_id = None
 	_new_submission_frequency = timedelta(hours=0)
+	_image_post_frequency = 0
 	_positive_keywords = []
 	_negative_keywords = []
 
@@ -60,15 +61,21 @@ class RedditIO(threading.Thread, LogicMixin):
 			self._subreddit = self._config['DEFAULT']['subreddit'].strip()
 		else:
 			logging.warning(f"Missing value of 'subreddit' in ini! Subreddit has been set to the default of r/{self._subreddit}!")
+
 		if self._config['DEFAULT']['submission_flair_id']:
 			self._new_submission_flair_id = self._config['DEFAULT']['submission_flair_id']
-			#print(self._new_submission_flair_id)
 		else:
 			logging.warning(f"Missing value of 'submission_flair_id' in ini! The flair ID has been set to the default of {self._new_submission_flair_id}!")
+
 		if self._config['DEFAULT']['post_frequency']:
 			self._new_submission_frequency = timedelta(hours=int(self._config['DEFAULT']['post_frequency']))
 		else:
 			logging.warning(f"Missing value of 'post_frequency' in ini! Post frequency has been set to the default of {self._new_submission_frequency}!")
+
+		if self._config['DEFAULT']['image_post_frequency']:
+			self._image_post_frequency = self._config['DEFAULT'].getfloat('image_post_frequency')
+		else:
+			logging.warning(f"Missing value of 'image_post_frequency' in ini! Image post frequency has been set to the default of {self._image_post_frequency}!")
 
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini
@@ -222,19 +229,36 @@ class RedditIO(threading.Thread, LogicMixin):
 			post_job.reddit_post_attempts += 1
 			post_job.save()
 
-			if len(self._negative_keyword_matches(post_job.generated_text)) > 0:
+			generated_text = post_job.generated_text
+
+			if len(self._negative_keyword_matches(generated_text)) > 0:
 				# A negative keyword was found, so don't post this text back to reddit
 				continue
 
+			if generated_text.startswith('<|sols|>'):
+				submission_type = 'url'
+			elif generated_text.startswith('<|soss|>'):
+				submission_type = 'selftext'
+
 			post_parameters = self.extract_submission_text_from_generated_text(\
-				post_job.text_generation_parameters['prompt'], post_job.generated_text)
+				post_job.text_generation_parameters['prompt'], generated_text)
 
 			if not post_parameters:
 				logging.info(f"Submission text could not be found in generated text of job {post_job.id}")
 				continue
 
+			if submission_type == 'url':
+				image_url = self.find_image_url_for_search_string(post_parameters['title'])
+
+				if not image_url:
+					logging.info(f"Could not get an image for the submission: {post_parameters['title']}")
+					continue
+
+				post_parameters['url'] = image_url
+
 			post_parameters['flair_id'] = self._new_submission_flair_id
 
+			# Post the submission to reddit
 			submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters)
 
 			post_job.posted_name = submission_praw_thing.name

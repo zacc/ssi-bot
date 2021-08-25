@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
+import json
 import logging
+import random
+import requests
+import urllib.parse
 
 from datetime import datetime
+
+from bs4 import BeautifulSoup
 
 from praw.models import (Submission as praw_Submission, Comment as praw_Comment)
 
@@ -26,12 +32,15 @@ class LogicMixin():
 		return '<|sor|>'
 
 	def _get_random_new_submission_tag(self):
-		# Selftext only returned for now
-		# while GPT-2 will generate link submissions, the URLs are usually 404s.
-		# This function is named to futureproof that
-		# return random.choice(['<|sols|><|sot|>', '<|soss|><|sot|>'])
+		random.seed()
+		random_value = random.random()
 
-		return '<|soss|><|sot|>'
+		if random_value < self._image_post_frequency:
+			# Make a link (image) post
+			return '<|sols|><|sot|>'
+		else:
+			# Make a text post
+			return '<|soss|><|sot|>'
 
 	def _collate_tagged_comment_history(self, praw_thing, to_level=6):
 		"""
@@ -225,6 +234,8 @@ class LogicMixin():
 
 	def extract_submission_text_from_generated_text(self, prompt, generated_text):
 
+		return_dict = {}
+
 		# remove any cruft
 		generated_text = generated_text.replace('&amp;#x200B;\n', '')
 
@@ -238,33 +249,55 @@ class LogicMixin():
 			# There must be at least a complete title to make a submission
 			return {}
 
-		if generated_text.startswith('<|sols|>'):
-			submission_type = 'url'
-			maintext_start_tag = '<|sol|>'
-			maintext_end_tag = '<|eol|>'
-		elif generated_text.startswith('<|soss|>'):
-			submission_type = 'selftext'
-			maintext_start_tag = '<|sost|>'
-			maintext_end_tag = '<|eost|>'
-
-		# Find the start and end tags of the main text, starting from the end of the title
-		idx_maintext_start = generated_text.find(maintext_start_tag, idx_title_end)
-		idx_maintext_end = generated_text.find(maintext_end_tag, idx_title_end)
-
-		if idx_maintext_start != (idx_title_end + len(title_end_tag)):
-			# check that the main text immediately follows the title end
-			return {}
-
-		if idx_maintext_start == -1 or idx_maintext_end == -1:
-			# There must be a complete body (link or submission)
-			return {}
-
 		title = generated_text[idx_title_start + len(title_start_tag):idx_title_end]
 
 		if not (0 < len(title) < 300):
 			# Validate the title length is within reddit's range
 			return {}
 
-		maintext = generated_text[idx_maintext_start + len(maintext_start_tag):idx_maintext_end]
+		# The title is ok, add it to the dict to return
+		return_dict['title'] = title
 
-		return {'title': title, submission_type: maintext}
+		if generated_text.startswith('<|soss|>'):
+			selftext_start_tag = '<|sost|>'
+			selftext_end_tag = '<|eost|>'
+
+			# Find the start and end tags of the main text, starting from the end of the title
+			idx_selftext_start = generated_text.find(selftext_start_tag, idx_title_end)
+			idx_selftext_end = generated_text.find(selftext_end_tag, idx_title_end)
+
+			if idx_selftext_start == -1 or idx_selftext_end == -1:
+				# Both tags should be found
+				return {}
+
+			print(idx_selftext_start, (idx_title_end + len(title_end_tag)))
+			if idx_selftext_start != (idx_title_end + len(title_end_tag)):
+				# check that the main text immediately follows the title end
+				return {}
+
+			return_dict['selftext'] = generated_text[idx_selftext_start + len(selftext_start_tag):idx_selftext_end]
+
+		return return_dict
+
+	def find_image_url_for_search_string(self, search_string):
+		logging.info(f"Searching on Bing for an image for "{search_string}"")
+
+		# Truncate to the first 10 words to improve effectiveness of the search
+		search_parameters = {'q': ' '.join(search_string.split()[:10]), 'FORM': 'HDRSC2'}
+		query_string = urllib.parse.urlencode(search_parameters)
+
+		# Use Win10 Edge User Agent
+		header = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36 Edg/92.0.902.78"}
+		search_url = f"http://www.bing.com/images/search?" + query_string
+
+		r = requests.get(search_url, headers=header)
+		soup = BeautifulSoup(r.text, 'html.parser')
+
+		link_results = soup.find("a", {"class": "iusc"})
+
+		if link_results.has_attr('m'):
+			m = json.loads(link_results["m"])
+			logging.info(f"Found an image: {m['murl']}")
+			return m['murl']
+
+		logging.info("Could not find an image on Bing")
