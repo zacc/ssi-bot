@@ -297,11 +297,11 @@ class LogicMixin():
 							'FORM': 'HDRSC2',
 							'safeSearch': 'strict'}
 
-		query_string = urllib.parse.urlencode(search_parameters)
+		encoded_search_parameters = urllib.parse.urlencode(search_parameters)
+		search_url = "https://www.bing.com/images/search?" + encoded_search_parameters
 
 		# Use Win10 Edge User Agent
 		header = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36 Edg/92.0.902.78"}
-		search_url = f"https://www.bing.com/images/search?" + query_string
 
 		r = requests.get(search_url, headers=header)
 
