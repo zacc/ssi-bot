@@ -40,6 +40,9 @@ class RedditIO(threading.Thread, LogicMixin):
 	_subreddit = 'test'
 	_new_submission_flair_id = None
 	_new_submission_frequency = timedelta(hours=0)
+	_image_post_frequency = 0
+	_image_post_search_prefix = ''
+
 	_positive_keywords = []
 	_negative_keywords = []
 
@@ -60,15 +63,24 @@ class RedditIO(threading.Thread, LogicMixin):
 			self._subreddit = self._config['DEFAULT']['subreddit'].strip()
 		else:
 			logging.warning(f"Missing value of 'subreddit' in ini! Subreddit has been set to the default of r/{self._subreddit}!")
+
 		if self._config['DEFAULT']['submission_flair_id']:
 			self._new_submission_flair_id = self._config['DEFAULT']['submission_flair_id']
-			#print(self._new_submission_flair_id)
 		else:
 			logging.warning(f"Missing value of 'submission_flair_id' in ini! The flair ID has been set to the default of {self._new_submission_flair_id}!")
+
 		if self._config['DEFAULT']['post_frequency']:
 			self._new_submission_frequency = timedelta(hours=int(self._config['DEFAULT']['post_frequency']))
 		else:
 			logging.warning(f"Missing value of 'post_frequency' in ini! Post frequency has been set to the default of {self._new_submission_frequency}!")
+
+		if self._config['DEFAULT']['image_post_frequency']:
+			self._image_post_frequency = self._config['DEFAULT'].getfloat('image_post_frequency')
+		else:
+			logging.warning(f"Missing value of 'image_post_frequency' in ini! Image post frequency has been set to the default of {self._image_post_frequency}!")
+
+		if self._config['DEFAULT']['image_post_search_prefix']:
+			self._image_post_search_prefix = self._config['DEFAULT']['image_post_search_prefix']
 
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini
@@ -215,19 +227,21 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		for post_job in self.pending_new_submission_jobs():
 
-			logging.info(f'Starting to post reply job {post_job.id} to reddit')
+			logging.info(f'Starting to post new submission job {post_job.id} to reddit')
 
 			# Increment the post attempts counter.
 			# This is to prevent posting too many times if there are errors
 			post_job.reddit_post_attempts += 1
 			post_job.save()
 
-			if len(self._negative_keyword_matches(post_job.generated_text)) > 0:
+			generated_text = post_job.generated_text
+
+			if len(self._negative_keyword_matches(generated_text)) > 0:
 				# A negative keyword was found, so don't post this text back to reddit
 				continue
 
 			post_parameters = self.extract_submission_text_from_generated_text(\
-				post_job.text_generation_parameters['prompt'], post_job.generated_text)
+				post_job.text_generation_parameters['prompt'], generated_text)
 
 			if not post_parameters:
 				logging.info(f"Submission text could not be found in generated text of job {post_job.id}")
@@ -235,7 +249,38 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			post_parameters['flair_id'] = self._new_submission_flair_id
 
-			submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters)
+			if generated_text.startswith('<|sols|>'):
+				# Get a list of images that match the search string
+				image_urls = self.find_image_urls_for_search_string(post_parameters['title'])
+
+				if not image_urls:
+					logging.info(f"Could not get any images for the submission: {post_parameters['title']}")
+					continue
+
+				for image_url in image_urls:
+					post_parameters['url'] = image_url
+
+					try:
+						# Post the submission to reddit
+						submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters)
+						break
+
+					except praw.exceptions.RedditAPIException as e:
+						if 'DOMAIN_BANNED' in str(e):
+							# continue and try again with another image_url
+							continue
+						# Otherwise raise the exception
+						raise e
+
+			elif generated_text.startswith('<|soss|>'):
+
+				# Post the submission to reddit
+				submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters)
+
+			if not submission_praw_thing:
+				# no submission has been made
+				logging.info(f"Failed to make a submission for job {post_job.id}")
+				continue
 
 			post_job.posted_name = submission_praw_thing.name
 			post_job.save()
