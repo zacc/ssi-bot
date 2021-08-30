@@ -290,7 +290,7 @@ class LogicMixin():
 
 		# If it exists, add the prefix to improve results
 		if self._image_post_search_prefix:
-			search_parameters = self._image_post_search_prefix + ' ' + search_terms
+			search_terms = self._image_post_search_prefix + ' ' + search_terms
 
 		# Collect and encode all search url parameters
 		search_parameters = {'q': search_terms,
