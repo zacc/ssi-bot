@@ -43,12 +43,12 @@ class RedditIO(threading.Thread, LogicMixin):
 	_image_post_frequency = 0
 	_image_post_search_prefix = ''
 
-	# These hard-coded negative keywords are used to prevent the bot
-	# posting distasteful stuff. A keyword list will never be perfect but
-	# it's a basic defence when the operator does not add their own custom defences
+	# These hard-coded negative keywords are used to prevent the bot posting distasteful stuff.
+	# It's only inteded as a basic defence.
+	# Operator should train their model to avoid falling back on this.
 	_default_negative_keywords = [
 		('ar', 'yan'), ('ausch, witz'),
-		('black', 'people'),
+		('black', ' people'),
 		('child p', 'orn'), ('concentrati', 'on camp'),
 		('fag', 'got'),
 		('hit', 'ler'), ('holo', 'caust'),
