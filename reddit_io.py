@@ -52,7 +52,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		('child p', 'orn'), ('concentrati', 'on camp'),
 		('fag', 'got'),
 		('hit', 'ler'), ('holo', 'caust'),
-		('israel'),
+		('inc', 'est'), ('israel'),
 		('jew', 'ish'), ('je', 'w'), ('je', 'ws'),
 		(' k', 'ill'), ('kk', 'k'),
 		('lol', 'i'),
