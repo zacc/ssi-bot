@@ -59,7 +59,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		('maste', 'r race'), ('mus', 'lim'),
 		('nation', 'alist'), ('na', 'zi'), ('nig', 'ga'), ('nig', 'ger'),
 		('pae', 'do'), ('pale', 'stin'), ('ped', 'o'),
-		('rac' 'ist'), (' r', 'ape'), ('ra', 'ped'),
+		('rac' 'ist'), (' r', 'ape'), ('ra', 'ping'),
 		('sl', 'ut'), ('swas', 'tika'),
 	]
 
