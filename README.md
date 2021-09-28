@@ -103,7 +103,7 @@ This means putting it on a VPS/server, or an old laptop in your house could suff
 
 
 ### Setup your Python environment
-1. Install packages with `pip install -Ur pip.req` (Advised: Use virtualenv)
+1. Install packages with `pip install -Ur requirements.txt` (Advised: Use virtualenv)
 To keep a terminal window open on Ubuntu Server, use an application
 called `tmux`
 
