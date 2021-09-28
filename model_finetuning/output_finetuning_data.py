@@ -107,7 +107,7 @@ def gather_comments_for_submission(sub):
 					record_string = f"<|soss|><|sot|>{ancestor.title}<|eot|><|sost|>{ancestor.selftext}<|eost|>"
 				else:
 				# if there's no selftext then it's just a linkpost.
-					record_string = f"<|sols|><|sot|>{ancestor.title}<|eot|><|sol|>{ancestor.url}<|eol|>"
+					record_string = f"<|sols|><|sot|>{ancestor.title}<|eot|><|sol|><|eol|>"
 
 				text_gen_string = record_string + text_gen_string
 				break
