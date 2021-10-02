@@ -16,10 +16,33 @@ config.read('dataset.ini')
 
 # a list of common bots to ignore the comments of. They will pollute the training data with junk.
 # unless you want that, of course..
-author_blacklist = ['automoderator', 'nfl_mod', 'totesmessenger', 'haikubot-1911', 'gfy_mirror', 'should_have_listened',
-	'nice-scores', 'repliesnice', 'redditstreamable', 'twittertostreamable', 'streamablemirrors', 'originalpostsearcher',
-	'b0trank', 'vredditdownloader', 'tweetposter', 'link-reply-bot', 'clickablelinkbot', 'i-am-dad-bot', 'GitHubPermalinkBot',
-	'Freedom_Unit_Bot', 'LearnProgramming_Bot', 'CodeFormatHelperBot']
+author_blacklist = [
+	'[deleted]',
+	'AmputatorBot', 'analyzeHistory', 'anti-gif-bot', 'AnimalFactsBot', 'automoderator', 'autotldr', 'auto-xkcd37', 'autourbanbot', 'AyyLmao2DongerBot-v2',
+	'BadDadBot', 'BaseballBot', 'b0trank', 'Bot_Metric',
+	'CakeDay--Bot', 'checks_out_bot', 'ClickableLinkBot', 'CodeFormatHelperBot', 'CoolDownBot', 'CommonMisspellingBot', 'converter-bot', 'could-of-bot',
+	'DailMail_Bot', '[deleted]',
+	'EmojifierBot', 'enzo32ferrari',
+	'fast-parenthesis-bot', 'FatFingerHelperBot', 'FlairHelperBot', 'Freedom_Unit_Bot', 'friendly-bot', 'fukramosbot',
+	'gfy_mirror', 'gifv-bot', 'GitCommandBot', 'GitHubPermalinkBot', 'Gyazo_Bot', 'GoodBot_BadBot',
+	'haikubot-1911', 'haikusbot', 'HelperBot_', 'highlightsbot', 'HuachiBot',
+	'IamYodaBot', 'i-am-dad-bot', 'imguralbumbot', 'ImJimmieJohnsonBot', 'Its_URUGUAY_bot', 'JobsHelperBot', 'JustAHooker', 'kmcc93',
+	'LinkFixerBot', 'link-reply-bot', 'LearnProgramming_Bot', 'LimbRetrieval-Bot', 'LinkExpanderBot',
+	'MAGIC_EYE_BOT', 'MaxImageBot', 'Mentioned_Videos', 'metric_units', 'MLBVideoConverterBot', 'ModeratelyHelpfulBot', 'morejpeg_auto',
+	'NASCARThreadBot', 'NBA_MOD', 'NFL_Warning', 'NFLVideoConverterBot', 'nice-scores', 'NicolasBotCage',
+	'of_have_bot', 'ootpbot', 'originalpostsearcher',
+	'parenthesis-bot', 'PicDescriptionBot', 'phonebatterylevelbot', 'PORTMANTEAU-BOT', 'ProgrammerHumorMods', 'pythonHelperBot',
+	'reddit-blackjack-bot', 'Reddit-Book-Bot', 'redditstreamable', 'relevant_post_bot', 'remindmebot', 'repliesnice', 'RepostCheckerBot', 'ReverseCaptioningBot', 'roastbot', 'RoastBotTenThousand',
+	'sexy-snickers', 'should_have_listened', 'Simultate_Me_Bot', 'SmallSubBot', 'SnapshillBot', 'sneakpeekbot',
+	'Spam_Detector_Bot', 'SpellCheck_Privilege', 'StreamableReddit', 'streamablemirrors', 'sub_doesnt_exist_bot', 'SwagmasterEDP',
+	'table_it_bot', 'thank_mr_skeltal_bot', 'THE_GREAT_SHAZBOT', 'timezone_bot', 'Title2ImageBot', 'TitleToImageBot', 'totesmessenger',
+	'twittertostreamable', 'tweetposter', 'TweetsInCommentsBot', 'tweettranscriberbot', 'twitterInfo_bot', 'TwitterVideoBot',
+	'User_Simulator',
+	'vredditdownloader', 'video_descriptionbot',
+	'WaterIsWetBot', 'WellWishesBot', 'WikiTextBot', 'WikiSummarizerBot',
+	'xkcd-Hyphen-bot', 'xkcd_transcriber',
+	'YoMammaJokebot', 'youtubefactsbot', 'YTubeInfoBot'
+	]
 
 # A list of bad words. If these words are in the reddit comment, ignore that comment
 # A good way to get the bot to behave nicely is to finetune it on healthy content in the first place
@@ -36,7 +59,7 @@ if config['DEFAULT']['negative_keywords']:
 	negative_keywords = config['DEFAULT']['negative_keywords'].split(',')
 
 # Keywords to be stripped from the dataset output
-text_removed = ['[removed]', '[deleted]']
+text_removed = ['[removed', '[deleted']
 
 
 def gather_comments_for_submission(sub):
@@ -50,75 +73,86 @@ def gather_comments_for_submission(sub):
 	if any(s in sub.selftext for s in text_removed):
 		# if the post has been edited or deleted it might contain [removed] or [deleted]
 		# if it does, ignore this submission because we can't train on that
-		print(f"blacklist selftext: {sub.selftext}")
+		print(f"text_removed selftext: {sub.selftext}")
 		return
 
-	if sub.author.lower() in author_blacklist:
-		print(f"author blacklist {sub.author}")
-		return
+	record_string = ""
+	comments_counted = 0
 
-	# pick out all of the comments in this submission(topic)
-	top_rated_comments = list(db_Comment.select().where((db_Comment.link_id == f't3_{sub.id}') &
-		(fn.Lower(db_Comment.author.not_in(author_blacklist)))))
+	if sub.is_self:
+		# is_self parameter means it is a selftext submission
+		record_string = f"<|soss|><|sot|>{sub.title}<|eot|><|sost|>{sub.selftext}<|eost|>"
+		suffix = "<|eoss|>"
+	else:
+		# if there's no selftext then it's just a linkpost.
+		record_string = f"<|sols|><|sot|>{sub.title}<|eot|><|sol|><|eol|>"
+		suffix = "<|eols|>"
 
-	for tr_comment in top_rated_comments:
-		# Here, we will start to create a string representation of the reddit submission, with all comments in a thread
-		# in chronological order
+	parent = sub
 
-		print(f"starting top rated comments loop {sub.id}")
+	for i in range(0, 10):
+		# Only go to x deep in the comments, but this can be increased to capture more data
 
-		# this is the end of the training string.. all text will be prepended to this
-		if tr_comment.submission().is_self:
-			# is_self parameter means it is a selftext submission
-			text_gen_string = "<|eoss|>"
+		if i == 0:
+			parent_id = f't3_{parent.id}'
 		else:
-			# Otherwise it is a link submission (ie just a title and URL)
-			text_gen_string = "<|eols|>"
+			parent_id = f't1_{parent.id}'
 
-		ancestor = tr_comment
-		comments_counted = 0
+		# Find all comments with this parent_id
+		# Pro-tip: in this query you can filter out any types of comments you don't want in the training data
+		# You can also change the sorting method
+		comment_list = list(db_Comment.select().where((db_Comment.parent_id == parent_id) &
+			(fn.Lower(db_Comment.author).not_in([a.lower() for a in author_blacklist])))
+			.order_by(db_Comment.score.desc()))
 
-		# From the top rated comment, we'll loop back up the comment thread until
-		# we reach the submission
-		# Then we have the submission text and comment text all in the correct reply
-		# order that represents how humans have a conversation
-		while ancestor is not None:
+		if not comment_list:
+			# No comments were found.. we've reached the end of the tree
+			# Break and return the string and its suffix
+			break
 
-			if (ancestor.author.lower() in author_blacklist or
-				ancestor.author.lower().endswith('bot')):
-				# is probably a bot account, break the loop
-				break
+		for comment in comment_list:
 
-			if isinstance(ancestor, db_Comment):
-				if any(s in ancestor.body for s in text_removed):
-					print("blacklist text... breaking")
-					break
+			if any(s.lower() in comment.body.lower() for s in text_removed):
+				print(f"comemnt {comment.id} body has been deleted/removed")
+				# Cannot use this comment in the training data
+				continue
 
-				record_string = f"<|sor|>{ancestor.body}<|eor|>"
+			if any(s.lower() in comment.body.lower() for s in negative_keywords):
+				print(f"comemnt {comment.id} body contains negative keywords")
+				# Cannot use this comment in the training data
+				continue
 
-				# build the text_gen_string up backwards
-				text_gen_string = record_string + text_gen_string
+			# Check that this record's parent text is not identical.
+			# so we don't train the model to repeat itself
+			try:
+				if comment.body == comment.parent().body:
+					print("comment body matches its parent", comment.body, comment.parent().body)
+					continue
+			except:
+				pass
+
+			parent_parent = None
+
+			try:
+				# See if we have the parent/parent in the database
+				parent_parent = comment.parent().parent()
+			except:
+				pass
+
+			if parent_parent and parent_parent.author == comment.author:
+				# If parent_parent is the same as this comment then use the different tag
+				record_string += f"<|soocr|>{comment.body}<|eoocr|>"
 				comments_counted += 1
+			else:
+				record_string += f"<|sor|>{comment.body}<|eor|>"
+				comments_counted += 1
+			# If we haven't continued by this point we can break the loop
+			break
 
-			elif isinstance(ancestor, db_Submission):
+		# Set the parent variable to be this comment
+		parent = comment
 
-				if ancestor.is_self:
-					# is_self parameter means it is a selftext submission
-					record_string = f"<|soss|><|sot|>{ancestor.title}<|eot|><|sost|>{ancestor.selftext}<|eost|>"
-				else:
-				# if there's no selftext then it's just a linkpost.
-					record_string = f"<|sols|><|sot|>{ancestor.title}<|eot|><|sol|><|eol|>"
-
-				text_gen_string = record_string + text_gen_string
-				break
-
-			# get the next comment up in the thread and compile the text for that, too.
-			ancestor = ancestor.parent()
-
-		if text_gen_string.startswith("<|sols") or text_gen_string.startswith('<|soss') and comments_counted > 0:
-			# sols/soss is in the thread so we reached the submission and counted at least one comment
-			# that's sufficient to add into the training output data.
-			return text_gen_string
+	return record_string + suffix
 
 
 def main():
@@ -154,17 +188,19 @@ def main():
 
 		with open(filename, 'a', encoding='utf-8') as fd:
 			for sub, output_text_gen_string in zip(training_submissions, executor.map(gather_comments_for_submission, training_submissions)):
-				counter += 1
 				if output_text_gen_string:
-					fd.write(f'{output_text_gen_string}' + '<|endoftext|>\n')
+					if counter > 0: fd.write('\n')
+					fd.write(f'{output_text_gen_string}' + '<|endoftext|>')
+				counter += 1
 				print(f'subs counted: {counter}. {round(counter/len(all_submissions), 2)}')
 
 		filename = f'{bot_name}_{date_string}_eval.txt'
 		with open(filename, 'a', encoding='utf-8') as fd:
 			for sub, output_text_gen_string in zip(eval_submissions, executor.map(gather_comments_for_submission, eval_submissions)):
-				counter += 1
 				if output_text_gen_string:
-					fd.write(f'{output_text_gen_string}' + '<|endoftext|>\n')
+					if counter > 0: fd.write('\n')
+					fd.write(f'{output_text_gen_string}' + '<|endoftext|>')
+				counter += 1
 				print(f'subs counted: {counter}. {round(counter/len(all_submissions), 2)}')
 
 

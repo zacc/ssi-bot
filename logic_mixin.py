@@ -28,6 +28,13 @@ class LogicMixin():
 		*This section is customisable for your own bot and how it has been finetuned*
 		"""
 
+		if isinstance(praw_thing, praw_Comment):
+			# Only a comment itself can have a parent
+			if praw_thing.parent().author.lower() == self._praw.user.me().name.lower():
+				# The parent of the comment we are replying to is the bot's comment itself
+				# Thus return with an ocr tag
+				return '<|soocr|>'
+
 		# It's just a straight reply
 		return '<|sor|>'
 
@@ -80,8 +87,20 @@ class LogicMixin():
 				break
 
 			elif isinstance(loop_thing, praw_Comment):
-				# just a normal <|sor|>
-				tagged_text = f'<|sor|>{loop_thing.body}<|eor|>'
+
+				parent_parent = None
+				try:
+					# This will make slow network calls so might fail
+					parent_parent = loop_thing.parent().parent()
+				except:
+					pass
+
+				if parent_parent and parent_parent.author == loop_thing.author:
+					# parent comment is also by this user so tag appropriately
+					tagged_text = f'<|soocr|>{loop_thing.body}<|eoocr|>'
+				else:
+					# just a normal reply
+					tagged_text = f'<|sor|>{loop_thing.body}<|eor|>'
 
 				if len(tagged_text + prefix) > 1500:
 					# If the prefix becomes too long, the model text generation will break
