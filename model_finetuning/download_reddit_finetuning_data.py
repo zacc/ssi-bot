@@ -76,6 +76,11 @@ def write_to_database(q):
 
 					json_item['body'] = clean_text(json_item['body'])
 
+					# Try to detect whether the comment is a URL only with no text so we can ignore it later
+					json_item['is_url_only'] = (json_item['body'].startswith('[') and json_item['body'].endswith(')'))\
+							or ('http' in json_item['body'].lower() and ' ' not in json_item['body'])
+
+
 					db_record = db_Comment.create(**json_item)
 					if verbose:
 						print(f"comment {json_item['id']} written to database")
