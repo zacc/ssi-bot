@@ -101,6 +101,11 @@ class RedditIO(threading.Thread, LogicMixin):
 		else:
 			logging.warning(f"Missing value of 'image_post_frequency' in ini! Image post frequency has been set to the default of {self._image_post_frequency}!")
 
+		if self._config['DEFAULT']['vqgan_clip_frequency']:
+			self._vqgan_clip_frequency = self._config['DEFAULT'].getfloat('vqgan_clip_frequency')
+		else:
+			logging.warning(f"Missing value of 'vqgan_clip_frequency' in ini! VQGAN+CLIP post frequency has been set to the default of {self._vqgan_clip_frequency}!")
+
 		if self._config['DEFAULT']['image_post_search_prefix']:
 			self._image_post_search_prefix = self._config['DEFAULT']['image_post_search_prefix']
 
@@ -272,8 +277,15 @@ class RedditIO(threading.Thread, LogicMixin):
 			post_parameters['flair_id'] = self._new_submission_flair_id
 
 			if generated_text.startswith('<|sols|>'):
-				# Get a list of images that match the search string
-				image_urls = self.find_image_urls_for_search_string(post_parameters['title'])
+				# roll the dice to decide whether to use Bing search or VQGAN+CLIP
+				random.seed()
+				random_value = random.random()
+				if random_value < self._vqgan_clip_frequency:
+					# Use the post title as a CLIP propt to generate an image using VQGAN
+					image_urls = self.gen_vqgan_clip_image_url(post_parameters['title'])
+				else:
+					# Get a list of images that match the search string
+					image_urls = self.find_image_urls_for_search_string(post_parameters['title'])
 
 				if not image_urls:
 					logging.info(f"Could not get any images for the submission: {post_parameters['title']}")

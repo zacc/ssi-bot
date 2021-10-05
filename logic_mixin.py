@@ -4,6 +4,8 @@ import logging
 import random
 import requests
 import urllib.parse
+import os
+import pyimgur
 
 from datetime import datetime
 
@@ -318,3 +320,24 @@ class LogicMixin():
 
 		logging.info(f"Found {len(return_list)} images, returning top {limit}")
 		return return_list[:limit]
+
+	def gen_vqgan_clip_image_url(self, search_string):
+		# url = 'https://thispersondoesnotexist.com/image'
+		# r = requests.get(url, allow_redirects=True)
+		# open('media/TPDNE_temp.jpeg', 'wb').write(r.content)
+
+		# Just mimicking the structure of Bing search
+		return_list = []
+
+		if self._image_post_search_prefix:
+			prompt_string = search_string + ' | ' + self._image_post_search_prefix
+		else:
+			prompt_string = search_string
+		os.system('./run_vqgan_clip.sh "{}"'.format(search_string))
+		CLIENT_ID = "3397aa412d41f4a"
+		PATH = "esrgan/output.png"
+		im = pyimgur.Imgur(CLIENT_ID)
+		uploaded_image = im.upload_image(PATH, title="The wet dream of an AI")
+		return_list.append(uploaded_image.link)
+
+		return return_list
