@@ -334,7 +334,8 @@ class LogicMixin():
 		else:
 			prompt_string = search_string
 		os.system('./run_vqgan_clip.sh "{}"'.format(search_string))
-		CLIENT_ID = "3397aa412d41f4a"
+		# You should have gotten an API ID when you signed up
+		CLIENT_ID = "Imgur_API_Client_ID"
 		PATH = "esrgan/output.png"
 		im = pyimgur.Imgur(CLIENT_ID)
 		uploaded_image = im.upload_image(PATH, title="The wet dream of an AI")
