@@ -1,11 +1,32 @@
 
 Minimum Python requirement: Python 3.6
 
-Tested on:
+Support:
 Ubuntu-flavor Linux.
 
-Untested:
-Mac/Windows variants (pull requests etc to enable support other OS are welcome)
+Some users have had success running it on Windows
+
+
+### Choosing training material
+
+Choosing good training material for your bot is very important.
+Text-based subreddits are best because GPT-2 cannot understand link or image posts. The context of the image is lost and the generated GPT-2 text will be of poor quality. 
+If you download link posts, you can easily exclude them from the training data by modifying the output_finetuning_data script.
+
+#### Bannable/offensive content
+Bots using this framework have been banned by reddit.
+
+Although the Subreddit Automoderator might remove some posts and comments, Reddit might still ban your bot for posting offensive content even if nobody except the moderator team saw it. The subreddit moderators have no control over this ban.
+It's very important to use the negative_keywords feature in the config to prevent bad text being posted to Reddit in the first place.
+
+The best way to avoid getting your bot banned is to train it with safe material in the first place. Some tips for cleaning the data are: 
+- Choose a subreddit with safe content
+- Modify the output_finetuning_data script to exclude comments with offensive content
+- Find/replace on the training output data to change phrases to safe content
+
+#### Change of context
+When you run your bot, it will use the data in a different context compared to the original source. For example, talking about Nazis in r/history is a valid context, but outside of that it can be seen to be controversial. The context is important when deciding if your bot is posting offensive content or not.
+
 
 ### Glossary / PyPI packages used
 `simpletransformers` An open source Python package made by Thilina Rajapakse. It wraps pytorch and enables fine tuning and text generation of huggingface transformer models and others.
