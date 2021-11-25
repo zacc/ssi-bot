@@ -1,10 +1,11 @@
 
 Minimum Python requirement: Python 3.6
 
-Support:
+Full support/developed on:
 Ubuntu-flavor Linux.
 
-Some users have had success running it on Windows
+A setup guide for Windows is here:
+https://docs.google.com/document/d/1t9b8QSsWiTU5uSBRZQBavKn9jK040t08
 
 
 ### Choosing training material
