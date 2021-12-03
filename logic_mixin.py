@@ -142,10 +142,6 @@ class LogicMixin():
 		if submission_link_flair_text.lower() in ['announcement']:
 			return 0
 
-		# if the bot is mentioned, or its username is in the thing_text_content, reply 100%
-		if praw_thing.type == 'username_mention' or self._praw.user.me().name.lower() in thing_text_content.lower():
-			return 1
-
 		if praw_thing.type == 'comment':
 			# Find the depth of the comment
 			if self._find_depth_of_comment(praw_thing) > 9:
@@ -190,6 +186,10 @@ class LogicMixin():
 			if praw_thing.submission.author == self._praw.user.me().name:
 				# the submission is by the author, and favor that
 				base_probability += 0.3
+
+		# if the bot is mentioned, or its username is in the thing_text_content, reply 100%
+		if praw_thing.type == 'username_mention' or self._praw.user.me().name.lower() in thing_text_content.lower():
+			base_probability = 1
 
 		reply_probability = min(base_probability, 1)
 
