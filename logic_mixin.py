@@ -30,7 +30,7 @@ class LogicMixin():
 
 		if isinstance(praw_thing, praw_Comment):
 			# Only a comment itself can have a parent
-			if praw_thing.parent().author.lower() == self._praw.user.me().name.lower():
+			if praw_thing.parent().author.name.lower() == self._praw.user.me().name.lower():
 				# The parent of the comment we are replying to is the bot's comment itself
 				# Thus return with an ocr tag
 				return '<|soocr|>'
