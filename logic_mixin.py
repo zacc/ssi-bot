@@ -161,9 +161,10 @@ class LogicMixin():
 
 		# Check the flair and username to see if the author might be a bot
 		# 'Verified GPT-2 Bot' is only valid on r/subsimgpt2interactive
-		if 'verified gpt-2 bot' in (getattr(praw_thing, 'author_flair_text', '') or '').lower()\
+		# Sometimes author_flair_text will be present but None
+		if 'verified gpt-2' in (getattr(praw_thing, 'author_flair_text', '') or '').lower()\
 			or any(praw_thing.author.name.lower().endswith(i) for i in ['ssi', 'bot', 'gpt2']):
-
+			# Reduce the reply probability by 10% to prioritise replying to humans
 			base_probability += -0.1
 		else:
 			# assume humanoid if author metadata doesn't meet the criteria for a bot
@@ -191,6 +192,10 @@ class LogicMixin():
 			if praw_thing.submission.author == self._praw.user.me().name:
 				# the submission is by the author, and favor that
 				base_probability += 0.3
+
+		# if the bot is mentioned, or its username is in the thing_text_content, reply 100%
+		if praw_thing.type == 'username_mention' or self._praw.user.me().name.lower() in thing_text_content.lower():
+			base_probability = 1
 
 		reply_probability = min(base_probability, 1)
 
@@ -291,7 +296,7 @@ class LogicMixin():
 
 		# If it exists, add the prefix to improve results
 		if self._image_post_search_prefix:
-			search_parameters = self._image_post_search_prefix + ' ' + search_terms
+			search_terms = self._image_post_search_prefix + ' ' + search_terms
 
 		# Collect and encode all search url parameters
 		search_parameters = {'q': search_terms,
