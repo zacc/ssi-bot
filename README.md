@@ -95,6 +95,79 @@ To use these scripts, copy `dataset_template.ini` to `dataset.ini` and configure
 `Google Query`
 Some people have used Google Query to download the training data faster. You'll need to write your own script to output the data into the same structure of the output_training_data.py script.
 
+### Customizing the output script to collect better training output data
+
+The default script will just output all of the training data, excluding that which contains negative keywords.
+
+By writing custom queries and joining up multiple sets of lists together we can create a custom training text file
+
+Here are some examples of using Peewee to filter the reddit data we downloaded.
+
+Text submissions are better for GPT-2. With link submissions, the context of the image is often lost.
+
+    # Filter only text submissions
+     
+    all_submissions = list(db_Submission.select().
+		where(db_Submission.is_self) &
+				(fn.Lower(db_Submission.subreddit).in_([s.lower() for s in training_subreddits])) &
+				(fn.Lower(db_Submission.author).not_in([a.lower() for a in author_blacklist]))))
+
+
+Subreddits that have enormous volumes of data can be filtered down using a keyword on the title.
+
+	# Filtering by one subreddit
+	# Excluding titles by a single keyword
+     
+	all_submissions = []
+     
+	filtered_submissions = list(db_Submission.select().
+		where((fn.Lower(db_Submission.subreddit) == 'minecraft') &
+				(fn.Lower(db_Submission.title).contains('java')))
+     
+	all_submissions.extend(filtered_submissions)
+
+Repetitive content makes the model and the bot repeat that content too much. We can avoid it by excluding posts that include certain keywords.
+
+	# Excluding multiple strings
+     
+	import operator
+	from functools import reduce
+          
+	all_submissions = []
+     
+	exclude_title_strings = ['Weekly Thread', 'Moderator News']
+     
+	# creates a list of OR filters excluding each of the title strings
+	# ~ means negative, to exclude all titles containing the word java
+	exclude_title_filters = reduce(operator.or_, [~fn.Lower(db_Submission.title).contains(s) for s in exclude_title_strings])
+     
+	filtered_submissions = list(db_Submission.select().
+		where((fn.Lower(db_Submission.subreddit) == 'learnpython') &
+				(exclude_title_filters))
+     
+	all_submissions.extend(filtered_submissions)
+
+Submissions with short titles often lack context when trained with GPT-2.
+We can filter for longer titles with more words which will be more interesting.
+
+	# Filter all selftext posts only
+	# Filter by title having a minimum length of 50,
+	# but selftext being < 1000 characters
+     
+	filtered_submissions = list(db_Submission.select().
+		where((fn.Lower(db_Submission.subreddit) == 'showerthoughts') &
+				(db_Submission.is_self) &
+				(fn.Length(db_Submission.title) > 50) &
+				(fn.Length(db_Submission.selftext) < 1000))
+     
+	all_submissions.extend(filtered_submissions)
+
+
+Official documentation for the peewee ORM is here:
+https://docs.peewee-orm.com/en/latest/peewee/querying.html#filtering-records
+and a full list of peewee's query operators:
+https://docs.peewee-orm.com/en/latest/peewee/query_operators.html
+
 
 ### Finetuning on Google Colaboratory
 
