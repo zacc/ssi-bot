@@ -20,6 +20,8 @@ class LogicMixin():
 	while taking updates on the main classes.
 	"""
 
+	_do_not_reply_bot_usernames = ['automoderator', 'profanitycounter']
+
 	def _get_reply_tag(self, praw_thing):
 		"""
 		Get the reply tag to use.
@@ -108,8 +110,13 @@ class LogicMixin():
 			# don't proceed to attempt a reply. Usually we will have downloaded
 			# the praw_thing before it is deleted so this won't get hit often.
 			return 0
+
 		elif praw_thing.author.name.lower() == self._praw.user.me().name.lower():
 			# The incoming praw object's author is the bot, so we won't reply
+			return 0
+
+		if praw_thing.author.name.lower() in self._do_not_reply_bot_usernames:
+			# Never reply to these bots
 			return 0
 
 		# merge the text content into a single variable so it's easier to work with
@@ -142,17 +149,23 @@ class LogicMixin():
 		if submission_link_flair_text.lower() in ['announcement']:
 			return 0
 
-		if praw_thing.type == 'comment':
-			# Find the depth of the comment
-			if self._find_depth_of_comment(praw_thing) > 9:
-				# don't reply to comments at > 9, to stop bots replying forever
-				# and also to keep the bot's comments high up and visible
-				return 0
-
 		# From here we will start to calculate the probability cumulatively
 		# Adjusting the weights here will change how frequently the bot will post
 		# Try not to spam the sub too much and let other bots and humans have space to post
-		base_probability = -0.2
+		base_probability = -0.1
+
+		if praw_thing.type == 'comment':
+			# Find the depth of the comment
+			comment_depth = self._find_depth_of_comment(praw_thing)
+
+			if comment_depth > 9:
+				# don't reply to comments at > 9, to stop bots replying forever
+				# and also to keep the bot's comments high up and visible
+				return 0
+			else:
+				# Reduce the reply probability 5% for each level of comment depth
+				# to keep the replies higher up
+				base_probability -= (comment_depth * 0.05)
 
 		# Check the flair and username to see if the author might be a bot
 		# 'Verified GPT-2 Bot' is only valid on r/subsimgpt2interactive
@@ -177,7 +190,7 @@ class LogicMixin():
 		if praw_thing.type == 'comment':
 			if praw_thing.parent().author == self._praw.user.me().name:
 				# the post prior to this is by the bot
-				base_probability += 0.1
+				base_probability += 0.2
 
 			if any(kw.lower() in praw_thing.body.lower() for kw in ['?', ' you']):
 				# any interrogative terms in the comment,
