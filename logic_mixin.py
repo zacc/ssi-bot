@@ -194,7 +194,7 @@ class LogicMixin():
 				base_probability += 0.3
 
 		# if the bot is mentioned, or its username is in the thing_text_content, reply 100%
-		if praw_thing.type == 'username_mention' or self._praw.user.me().name.lower() in thing_text_content.lower():
+		if getattr(praw_thing, 'type', '') == 'username_mention' or self._praw.user.me().name.lower() in thing_text_content.lower():
 			base_probability = 1
 
 		reply_probability = min(base_probability, 1)
