@@ -140,7 +140,7 @@ class LogicMixin():
 
 		# second most important thing is to check for a negative keyword
 		# calculate whether negative keywords are in the text and return 0
-		if len(self._negative_keyword_matches(thing_text_content)) > 0:
+		if len(self._keyword_helper.negative_keyword_matches(thing_text_content)) > 0:
 			# The title or selftext/body contains negative keyword matches
 			# and we will avoid engaging with negative content
 			return 0
@@ -178,7 +178,7 @@ class LogicMixin():
 			# assume humanoid if author metadata doesn't meet the criteria for a bot
 			base_probability += 0.3
 
-		if len(self._positive_keyword_matches(thing_text_content)) > 0:
+		if len(self._keyword_helper.positive_keyword_matches(thing_text_content)) > 0:
 			# A positive keyword was found, increase probability of replying
 			base_probability += 0.3
 
