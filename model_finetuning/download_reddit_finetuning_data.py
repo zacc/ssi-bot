@@ -24,6 +24,7 @@ verbose = False
 if config['DEFAULT']['verbose']:
 	verbose = config['DEFAULT'].getboolean('verbose')
 
+
 def loop_between_dates(start_datetime, end_datetime):
 	# yields start and end dates between the dates given
 	# at weekly intervals
@@ -101,7 +102,7 @@ def write_to_database(q):
 
 
 def main():
-	
+
 	print("starting download, use Ctrl+C to pause at any point in the process")
 
 	create_tables()
@@ -154,7 +155,6 @@ def main():
 
 		for start, end in loop_between_dates(start_date, end_date):
 
-			
 			time_delta = (end.timestamp() - start_date.timestamp()) / date_range
 
 			print(f"downloading submission data from {start.date()} to {end.date()}... {round(time_delta * 100, 2)}%")
@@ -249,7 +249,7 @@ def main():
 						comment_attempt += 1
 
 						comment_response = requests.get(comment_search_link)
-						
+
 						if comment_response.status_code != 200:
 							if comment_attempt >= max_attempts:
 								print(f"Request error! Could not download comment data, status code {comment_response.status_code}")

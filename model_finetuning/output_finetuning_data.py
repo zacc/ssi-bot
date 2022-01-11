@@ -58,8 +58,9 @@ def gather_comments_for_submission(sub):
 		return
 
 	# pick out all of the comments in this submission(topic)
+	# is_url_only omits comments that are only a url, which look poor in the generated text
 	top_rated_comments = list(db_Comment.select().where((db_Comment.link_id == f't3_{sub.id}') &
-		(fn.Lower(db_Comment.author.not_in(author_blacklist)))))
+		(fn.Lower(db_Comment.author.not_in(author_blacklist))) & (~db_Comment.is_url_only)))
 
 	for tr_comment in top_rated_comments:
 		# Here, we will start to create a string representation of the reddit submission, with all comments in a thread
