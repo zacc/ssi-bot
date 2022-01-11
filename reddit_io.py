@@ -87,6 +87,13 @@ class RedditIO(threading.Thread, LogicMixin):
 		# pick up incoming submissions, comments etc from reddit and submit jobs for them
 
 		while True:
+			logging.info(f"Beginning to process inbox stream")
+
+			try:
+				self.poll_inbox_stream()
+			except:
+				logging.exception("Exception occurred while processing the inbox streams")
+
 			logging.info(f"Beginning to process incoming reddit streams")
 
 			try:
@@ -117,58 +124,74 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			time.sleep(120)
 
+	def poll_inbox_stream(self):
+
+		for praw_thing in self._praw.inbox.stream(pause_after=0):
+
+			if praw_thing is None:
+				break
+
+			if isinstance(praw_thing, praw_Comment):
+
+				record = self.is_praw_thing_in_database(praw_thing)
+
+				if not record:
+					logging.info(f"New {praw_thing.type} received in inbox, {praw_thing.id}")
+
+					reply_probability = self.calculate_reply_probability(praw_thing)
+
+					text_generation_parameters = None
+
+					if random.random() < reply_probability:
+						# It will generate a reply, so grab the parameters before we put it into the database
+						text_generation_parameters = self.get_text_generation_parameters(praw_thing)
+
+					# insert it into the database
+					self.insert_praw_thing_into_database(praw_thing, text_generation_parameters)
+
+				# mark the inbox item read
+				praw_thing.mark_read()
+
 	def poll_incoming_streams(self):
 
-		# Setup all the streams for inbox mentions, new comments and submissions
-		mentions = self._praw.inbox.mentions(limit=25)
-
+		# Setup all the streams for new comments and submissions
 		sr = self._praw.subreddit(self._subreddit)
 		submissions = sr.stream.submissions(pause_after=0)
 		comments = sr.stream.comments(pause_after=0)
 
 		# Merge the streams in a single loop to DRY the code
-		for praw_thing in chain_listing_generators(mentions, submissions, comments):
-			if hasattr(praw_thing, 'new'):
-				# Only an inbox message will have a new attribute
-				if not praw_thing.new:
-					# skip if it is not a new mention inbox message
-					continue
+		for praw_thing in chain_listing_generators(submissions, comments):
 
 			# Check in the database to see if it already exists
 			record = self.is_praw_thing_in_database(praw_thing)
 
 			# If the thing is already in the database then we've already calculated a reply for it.
 			if not record:
-
-				# Furnish the praw_thing with some extra metadata that we'll use later
-				praw_thing = self.set_thing_type(praw_thing)
-
-				logging.info(f"New {praw_thing.type} thing received {praw_thing.name}")
+				thing_label = 'comment' if isinstance(praw_thing, praw_Comment) else 'submission'
+				logging.info(f"New {thing_label} thing received {praw_thing.name}")
 
 				reply_probability = self.calculate_reply_probability(praw_thing)
 
 				text_generation_parameters = None
 
 				if random.random() < reply_probability:
-					# if random number is less than the probability, we'll start a text generation job
-
-					logging.info(f"Configuring a textgen job for {praw_thing.type} {praw_thing.name}")
-
-					prompt = self._collate_tagged_comment_history(praw_thing) + self._get_reply_tag(praw_thing)
-
-					if prompt:
-						# If a prompt was returned, we can go ahead and create the text generation parameters dict
-						text_generation_parameters = self._default_text_generation_parameters.copy()
-						text_generation_parameters['prompt'] = prompt
-				else:
-					logging.info(f"No reply job configured for {praw_thing.type} {praw_thing.name}")
+					# It will generate a reply, so grab the parameters before we put it into the database
+					text_generation_parameters = self.get_text_generation_parameters(praw_thing)
 
 				# insert it into the database
 				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters)
 
-				# mark the inbox mention as read
-				if praw_thing.type == 'username_mention':
-					praw_thing.mark_read()
+	def get_text_generation_parameters(self, praw_thing):
+
+		logging.info(f"Configuring a textgen job for {praw_thing.name}")
+		prompt = self._collate_tagged_comment_history(praw_thing) + self._get_reply_tag(praw_thing)
+
+		if prompt:
+			# If a prompt was returned, we can go ahead and create the text generation parameters dict
+			text_generation_parameters = self._default_text_generation_parameters.copy()
+			text_generation_parameters['prompt'] = prompt
+
+			return text_generation_parameters
 
 	def post_outgoing_reply_jobs(self):
 
@@ -287,18 +310,6 @@ class RedditIO(threading.Thread, LogicMixin):
 			post_job.save()
 
 			logging.info(f"Job {post_job.id} submission submitted successfully")
-
-	def set_thing_type(self, praw_thing):
-		# A little nasty but very useful...
-		# furnish the praw_thing with type attribute
-		# that will help us DRY later in the code
-
-		if isinstance(praw_thing, praw_Comment):
-			praw_thing.type = 'comment'
-		elif isinstance(praw_thing, praw_Submission):
-			praw_thing.type = 'submission'
-
-		return praw_thing
 
 	def synchronize_bots_comments_submissions(self):
 		# at first run, pick up Bot's own recent submissions and comments

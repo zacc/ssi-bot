@@ -51,6 +51,9 @@ class Comment(Model):
 	score = IntegerField()
 	stickied = BooleanField(default=False)
 
+	# Non-standard field
+	is_url_only = BooleanField()
+
 	def parent(self):
 		# This function gets the parent Comment or Submission
 		# and is useful for traversing up the comment tree
