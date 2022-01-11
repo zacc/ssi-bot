@@ -117,13 +117,13 @@ class LogicMixin():
 		submission_link_flair_text = ''
 		submission_created_utc = None
 
-		if praw_thing.type == 'submission':
+		if isinstance(praw_thing, praw_Submission):
 			# object is a submission that has title and selftext
 			thing_text_content = f'{praw_thing.title} {praw_thing.selftext}'
 			submission_link_flair_text = praw_thing.link_flair_text or ''
 			submission_created_utc = datetime.utcfromtimestamp(praw_thing.created_utc)
 
-		elif praw_thing.type == 'comment':
+		elif isinstance(praw_thing, praw_Comment):
 			# otherwise it's a comment
 			thing_text_content = praw_thing.body
 			# navigate to the parent submission to get the link_flair_text
@@ -142,7 +142,12 @@ class LogicMixin():
 		if submission_link_flair_text.lower() in ['announcement']:
 			return 0
 
-		if praw_thing.type == 'comment':
+		# if the bot is mentioned, or its username is in the thing_text_content, reply 100%
+		# Only an inbox message will have a type
+		if getattr(praw_thing, 'type', '') == 'username_mention' or self._praw.user.me().name.lower() in thing_text_content.lower():
+			return 1
+
+		if isinstance(praw_thing, praw_Comment):
 			# Find the depth of the comment
 			if self._find_depth_of_comment(praw_thing) > 9:
 				# don't reply to comments at > 9, to stop bots replying forever
@@ -169,12 +174,12 @@ class LogicMixin():
 			# A positive keyword was found, increase probability of replying
 			base_probability += 0.3
 
-		if praw_thing.type == 'submission':
+		if isinstance(praw_thing, praw_Submission):
 			# it's a brand new submission and the bot can
 			# comment at the top level and get some exposure..
 			base_probability += 0.4
 
-		if praw_thing.type == 'comment':
+		if isinstance(praw_thing, praw_Comment):
 			if praw_thing.parent().author == self._praw.user.me().name:
 				# the post prior to this is by the bot
 				base_probability += 0.1
@@ -189,7 +194,7 @@ class LogicMixin():
 				base_probability += 0.3
 
 		# if the bot is mentioned, or its username is in the thing_text_content, reply 100%
-		if praw_thing.type == 'username_mention' or self._praw.user.me().name.lower() in thing_text_content.lower():
+		if getattr(praw_thing, 'type', '') == 'username_mention' or self._praw.user.me().name.lower() in thing_text_content.lower():
 			base_probability = 1
 
 		reply_probability = min(base_probability, 1)
