@@ -2,6 +2,7 @@
 import json
 import logging
 import random
+import re
 import requests
 import urllib.parse
 
@@ -92,6 +93,13 @@ class LogicMixin():
 
 			loop_thing = loop_thing.parent()
 			counter += 1
+
+		if prefix:
+			# Compile a regex that will match the bot username,
+			# then remove all instances from the text.
+			# This will stop GPT-2 using the bot's name in generated text which looks wrong in a real context.
+			regex = re.compile(re.escape(f"u/{self._praw.user.me().name}"), re.IGNORECASE)
+			prefix = regex.sub('', prefix)
 
 		if len(prefix) > 1500:
 			# The model can handle 1024 tokens, but a token is not just one character.
