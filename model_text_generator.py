@@ -11,6 +11,8 @@ from simpletransformers.language_generation import LanguageGenerationModel
 
 from db import Thing as db_Thing
 
+from keyword_helper import KeywordHelper
+
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -27,12 +29,16 @@ class ModelTextGenerator(threading.Thread):
 		self._config = ConfigParser()
 		self._config.read('ssi-bot.ini')
 
+		# Configure the keyword helper to check negative keywords in the generated text
+		self._keyword_helper = KeywordHelper()
+
 		self._model_path = os.path.join(ROOT_DIR, self._config['DEFAULT']['model_path'])
 
 		# if you are generating on CPU, keep use_cuda and fp16 both false.
 		# If you have a nvidia GPU you may enable these features
 		# TODO shift these parameters into the ssi-bot.ini file
 		self._model = LanguageGenerationModel("gpt2", self._model_path, use_cuda=False, args={'fp16': False})
+
 
 	def run(self):
 
@@ -57,7 +63,16 @@ class ModelTextGenerator(threading.Thread):
 					# use the model to generate the text
 					# pass a copy of the parameters to keep the job values intact
 					generated_text = self.generate_text(job.text_generation_parameters.copy())
+
 					if generated_text:
+
+						# Check for any negative keywords in the generated text and if so, return nothing
+						negative_keyword_matches = self._keyword_helper.negative_keyword_matches(generated_text)
+						if len(negative_keyword_matches) > 0:
+							# A negative keyword was found, so don't post this text back to reddit
+							logging.info(f"Negative keywords {negative_keyword_matches} found in generated text, this text will be rejected.")
+							continue
+
 						# if the model generated text, set it into the 'job'
 						job.generated_text = generated_text
 						job.save()
@@ -94,4 +109,5 @@ class ModelTextGenerator(threading.Thread):
 
 		logging.info(f'{len(output_list)} sample(s) of text generated in {duration} seconds.')
 
-		return output_list[0]
+		if output_list:
+			return output_list[0]
