@@ -1,5 +1,6 @@
 import logging
 import time
+import praw
 
 from model_text_generator import ModelTextGenerator
 from reddit_io import RedditIO
@@ -9,8 +10,11 @@ from db import create_db_tables
 
 def main():
 
-	# enable minimal logging
-	logging.basicConfig(level=logging.INFO)
+	_praw = praw.Reddit(config_interpolation="basic")
+
+	# enable minimal logging with a custom format showing the bot's username
+	NEW_LOG_FORMAT = f"[{_praw.user.me().name}] " + logging.BASIC_FORMAT
+	logging.basicConfig(format=NEW_LOG_FORMAT, level=logging.INFO)
 
 	# Create the database. If the table already exists, nothing will happen
 	create_db_tables()
