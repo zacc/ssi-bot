@@ -92,6 +92,11 @@ With less than 10mb of data you are at risk of overfitting the model to the data
 
 To use these scripts, copy `dataset_template.ini` to `dataset.ini` and configure it accordingly.
 
+`ssi-bot_finetuning_notebook.ipynb`
+This interactive Python notebook contains all the code and instructions for fine-tuning the GPT-2 model.
+It can be uploaded to Google Colaboratory to use a free GPU, or can be run locally on Jupyter Notebook/etc if you have your own GPU.
+
+
 `Google Query`
 Some people have used Google Query to download the training data faster. You'll need to write your own script to output the data into the same structure of the output_training_data.py script.
 
@@ -173,13 +178,11 @@ https://docs.peewee-orm.com/en/latest/peewee/query_operators.html
 
 The cheapest way to finetune the model is to use Google Colaboratory, which gives free access to a GPU for periods of 8-12 hours.
 
-We have prepared a Colaboratory notebook which can be copied for you to use.
-The instructions for finetuning continue inside the Colab notebook.
-https://colab.research.google.com/drive/1xAQDNZilolauTHy4he8xBQ0IP2G6LGqJ?usp=sharing
+A Python notebook file (`ssi-bot_finetuning_notebook.ipynb`) is kept in the `model_finetuning` directory.
 
-The optimum trained model will be saved in the best_model folder.
+Navigate to https://colab.research.google.com/ and click Upload. Upload the ipynb file and then follow the instructions.
 
-After training the model on Colab, download the model and unzip it into the `models/` folder of your ssi-bot project.
+After training, the optimum trained model will be saved in the `best_model` folder. Download the model and unzip it into the `models/` folder of your ssi-bot project.
 
 ### Finetuning locally
 
