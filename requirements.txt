@@ -1,5 +1,6 @@
 beautifulsoup4
 peewee
 praw
+requests
 simpletransformers
 torch
