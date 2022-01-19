@@ -204,12 +204,6 @@ class RedditIO(threading.Thread, LogicMixin):
 			post_job.reddit_post_attempts += 1
 			post_job.save()
 
-			negative_keyword_matches = self._keyword_helper.negative_keyword_matches(post_job.generated_text)
-			if len(negative_keyword_matches) > 0:
-				# A negative keyword was found, so don't post this text back to reddit
-				logging.info(f"Negative keywords {negative_keyword_matches} found in generated text, skipping the reply")
-				continue
-
 			# Get the praw object of the original thing we are going to reply to
 			source_praw_thing = None
 
@@ -280,12 +274,6 @@ class RedditIO(threading.Thread, LogicMixin):
 			post_job.save()
 
 			generated_text = post_job.generated_text
-
-			negative_keyword_matches = self._keyword_helper.negative_keyword_matches(generated_text)
-			if len(negative_keyword_matches) > 0:
-				# A negative keyword was found, so don't post this text back to reddit
-				logging.info(f"Negative keywords {negative_keyword_matches} found in generated text, skipping the post submission")
-				continue
 
 			post_parameters = self.extract_submission_text_from_generated_text(\
 				post_job.text_generation_parameters['prompt'], generated_text)
