@@ -8,6 +8,18 @@ A setup guide for Windows is here:
 https://docs.google.com/document/d/1t9b8QSsWiTU5uSBRZQBavKn9jK040t08
 
 
+### Overview
+
+This is the framework for an AI/Machine Learning Reddit Chatbot.
+
+The bot works by reading the comments and then using OpenAI's GPT-2 model to generate a new comment. The AI model is smart enough to generate a new comment on the topic.
+
+This framework also contains scripts and tools for fine-tuning the GPT-2 model. Fine-tuning will give your chatbot a personality and make it generate text in particular themes.
+
+An overview of AI/Machine Learning Text Generation can be found here:
+https://huggingface.co/tasks/text-generation
+
+
 ### Choosing training material
 
 Choosing good training material for your bot is very important.
