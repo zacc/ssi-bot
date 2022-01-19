@@ -8,6 +8,18 @@ A setup guide for Windows is here:
 https://docs.google.com/document/d/1t9b8QSsWiTU5uSBRZQBavKn9jK040t08
 
 
+### Overview
+
+This is the framework for an AI/Machine Learning Reddit Chatbot.
+
+The bot works by reading the comments and then using OpenAI's GPT-2 model to generate a new comment. The AI model is smart enough to generate a new comment on the topic.
+
+This framework also contains scripts and tools for fine-tuning the GPT-2 model. Fine-tuning will give your chatbot a personality and make it generate text in particular themes.
+
+An overview of AI/Machine Learning Text Generation can be found here:
+https://huggingface.co/tasks/text-generation
+
+
 ### Choosing training material
 
 Choosing good training material for your bot is very important.
@@ -92,6 +104,11 @@ With less than 10mb of data you are at risk of overfitting the model to the data
 
 To use these scripts, copy `dataset_template.ini` to `dataset.ini` and configure it accordingly.
 
+`ssi-bot_finetuning_notebook.ipynb`
+This interactive Python notebook contains all the code and instructions for fine-tuning the GPT-2 model.
+It can be uploaded to Google Colaboratory to use a free GPU, or can be run locally on Jupyter Notebook/etc if you have your own GPU.
+
+
 `Google Query`
 Some people have used Google Query to download the training data faster. You'll need to write your own script to output the data into the same structure of the output_training_data.py script.
 
@@ -173,13 +190,11 @@ https://docs.peewee-orm.com/en/latest/peewee/query_operators.html
 
 The cheapest way to finetune the model is to use Google Colaboratory, which gives free access to a GPU for periods of 8-12 hours.
 
-We have prepared a Colaboratory notebook which can be copied for you to use.
-The instructions for finetuning continue inside the Colab notebook.
-https://colab.research.google.com/drive/1xAQDNZilolauTHy4he8xBQ0IP2G6LGqJ?usp=sharing
+A Python notebook file (`ssi-bot_finetuning_notebook.ipynb`) is kept in the `model_finetuning` directory.
 
-The optimum trained model will be saved in the best_model folder.
+Navigate to https://colab.research.google.com/ and click Upload. Upload the ipynb file and then follow the instructions.
 
-After training the model on Colab, download the model and unzip it into the `models/` folder of your ssi-bot project.
+After training, the optimum trained model will be saved in the `best_model` folder. Download the model and unzip it into the `models/` folder of your ssi-bot project.
 
 ### Finetuning locally
 

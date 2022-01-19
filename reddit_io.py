@@ -5,7 +5,7 @@ import random
 import threading
 import time
 import regex as re
-
+import difflib
 from configparser import ConfigParser
 from datetime import datetime, timedelta
 
@@ -230,6 +230,29 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			if not reply_parameters:
 				logging.info(f"Reply body could not be found in generated text of job {post_job.id}")
+				continue
+
+			# Begin to check whether the generated matches the text the bot is replying to.
+			# The model can get fixated on repeating words and it looks bad.
+
+			# First, capture the text we want to compare
+			source_text_to_compare = None
+
+			if isinstance(source_praw_thing, praw_Submission):
+				# On a submission we'll only check the title
+				source_text_to_compare = source_praw_thing.title
+			elif isinstance(source_praw_thing, praw_Comment):
+				source_text_to_compare = source_praw_thing.body
+
+			if source_text_to_compare and reply_parameters['body'] and\
+				difflib.SequenceMatcher(None, source_text_to_compare.lower(), reply_parameters['body'].lower()).ratio() > 0.95:
+				# The generated text is 95% similar to the previous comment (ie it's a boring duplicate)
+				logging.info(f"Job {post_job.id} had duplicated generated text.")
+
+				# Clear the generated text on the post_job
+				# then it can try to re-generate it with a new random seed
+				post_job.generated_text = None
+				post_job.save()
 				continue
 
 			# Reply to the source thing with the generated text. A new praw_thing is returned
