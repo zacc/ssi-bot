@@ -119,6 +119,9 @@ class LogicMixin():
 		elif praw_thing.author.name.lower() == self._praw.user.me().name.lower():
 			# The incoming praw object's author is the bot, so we won't reply
 			return 0
+		elif praw_thing.author.name == 'AutoModerator':
+			# It's the AutoModerator, just ignore this.
+			return 0
 
 		# merge the text content into a single variable so it's easier to work with
 		thing_text_content = ''
