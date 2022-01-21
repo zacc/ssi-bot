@@ -10,7 +10,7 @@ from datetime import datetime
 
 from bs4 import BeautifulSoup
 
-from praw.models import (Submission as praw_Submission, Comment as praw_Comment)
+from praw.models import (Submission as praw_Submission, Comment as praw_Comment, Message as praw_Message)
 
 
 class LogicMixin():
@@ -70,11 +70,6 @@ class LogicMixin():
 					# it's a link submission
 					tagged_text = f"<|sols|><|sot|>{loop_thing.title}<|eot|><|sol|>{loop_thing.selftext}<|eol|>"
 
-				if len(tagged_text + prefix) > 1500:
-					# If the prefix becomes too long, the model text generation will break
-					# Break the while loop here and just return whatever prefix we have
-					break
-
 				prefix = tagged_text + prefix
 
 				# can't go any higher than a submission, so break the loop
@@ -84,14 +79,20 @@ class LogicMixin():
 				# just a normal <|sor|>
 				tagged_text = f'<|sor|>{loop_thing.body}<|eor|>'
 
-				if len(tagged_text + prefix) > 1500:
-					# If the prefix becomes too long, the model text generation will break
-					# Break the while loop here and just return whatever prefix we have
-					break
+				prefix = tagged_text + prefix
+				loop_thing = loop_thing.parent()
 
+			elif isinstance(loop_thing, praw_Message):
+
+				tagged_text = f'<|sor|>{loop_thing.body}<|eor|>'
 				prefix = tagged_text + prefix
 
-			loop_thing = loop_thing.parent()
+				if loop_thing.parent_id:
+					# Message's parent thing is read differently.
+					loop_thing = self._praw.inbox.message(message_id=loop_thing.parent_id[3:])
+				else:
+					break
+
 			counter += 1
 
 		if prefix:
@@ -119,8 +120,8 @@ class LogicMixin():
 		elif praw_thing.author.name.lower() == self._praw.user.me().name.lower():
 			# The incoming praw object's author is the bot, so we won't reply
 			return 0
-		elif praw_thing.author.name == 'AutoModerator':
-			# It's the AutoModerator, just ignore this.
+		elif praw_thing.author.name in ['AutoModerator', 'reddit']:
+			# Ignore comments/messages from Admins
 			return 0
 
 		# merge the text content into a single variable so it's easier to work with
@@ -141,6 +142,10 @@ class LogicMixin():
 			submission_link_flair_text = praw_thing.submission.link_flair_text or ''
 			submission_created_utc = datetime.utcfromtimestamp(praw_thing.submission.created_utc)
 
+		elif isinstance(praw_thing, praw_Message):
+			thing_text_content = praw_thing.body
+			submission_created_utc = datetime.utcfromtimestamp(praw_thing.created_utc)
+
 		# second most important thing is to check for a negative keyword
 		# calculate whether negative keywords are in the text and return 0
 		if len(self._keyword_helper.negative_keyword_matches(thing_text_content)) > 0:
@@ -153,9 +158,13 @@ class LogicMixin():
 		if submission_link_flair_text.lower() in ['announcement']:
 			return 0
 
-		# if the bot is mentioned, or its username is in the thing_text_content, reply 100%
+		# if the bot is mentioned,
+		# or its username is in the thing_text_content, reply 100%
+		# Or it is an inbox DM
 		# Only an inbox message will have a type
-		if getattr(praw_thing, 'type', '') == 'username_mention' or self._praw.user.me().name.lower() in thing_text_content.lower():
+		if getattr(praw_thing, 'type', '') == 'username_mention' or\
+			self._praw.user.me().name.lower() in thing_text_content.lower() or\
+			isinstance(praw_thing, praw_Message):
 			return 1
 
 		if isinstance(praw_thing, praw_Comment):
