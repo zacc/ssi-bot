@@ -38,12 +38,6 @@ class RedditIO(threading.Thread, LogicMixin):
 			'truncate': '<|eo',
 	}
 
-	_subreddit = 'test'
-	_new_submission_flair_id = None
-	_new_submission_frequency = timedelta(hours=0)
-	_image_post_frequency = 0
-	_image_post_search_prefix = ''
-
 	def __init__(self):
 		threading.Thread.__init__(self)
 
@@ -55,28 +49,22 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		self._keyword_helper = KeywordHelper()
 
-		if self._config['DEFAULT']['subreddit']:
-			self._subreddit = self._config['DEFAULT']['subreddit'].strip()
-		else:
-			logging.warning(f"Missing value of 'subreddit' in ini! Subreddit has been set to the default of r/{self._subreddit}!")
+		self._subreddit = self._config['DEFAULT'].get('subreddit', 'test').strip()
+		logging.info(f"Bot subreddit has been set to r/{self._subreddit}.")
 
-		if self._config['DEFAULT']['submission_flair_id']:
-			self._new_submission_flair_id = self._config['DEFAULT']['submission_flair_id']
-		else:
-			logging.warning(f"Missing value of 'submission_flair_id' in ini! The flair ID has been set to the default of {self._new_submission_flair_id}!")
+		self._new_submission_flair_id = self._config['DEFAULT'].get('submission_flair_id', None)
+		if self._new_submission_flair_id:
+			logging.info(f"The flair ID has been set to {self._new_submission_flair_id}!")
 
-		if self._config['DEFAULT']['post_frequency']:
-			self._new_submission_frequency = timedelta(hours=int(self._config['DEFAULT']['post_frequency']))
-		else:
-			logging.warning(f"Missing value of 'post_frequency' in ini! Post frequency has been set to the default of {self._new_submission_frequency}!")
+		self._new_submission_frequency = timedelta(hours=int(self._config['DEFAULT'].getint('post_frequency', 0)))
+		logging.info(f"Post frequency has been set to {self._new_submission_frequency}!")
 
-		if self._config['DEFAULT']['image_post_frequency']:
-			self._image_post_frequency = self._config['DEFAULT'].getfloat('image_post_frequency')
-		else:
-			logging.warning(f"Missing value of 'image_post_frequency' in ini! Image post frequency has been set to the default of {self._image_post_frequency}!")
+		self._image_post_frequency = self._config['DEFAULT'].getfloat('image_post_frequency', 0)
+		logging.info(f"Image post frequency has been set to the default of {(self._image_post_frequency * 100)}%.")
 
-		if self._config['DEFAULT']['image_post_search_prefix']:
-			self._image_post_search_prefix = self._config['DEFAULT']['image_post_search_prefix']
+		self._image_post_search_prefix = self._config['DEFAULT'].get('image_post_search_prefix', '')
+
+		self._set_nsfw_flair_on_posts = self._config['DEFAULT'].getboolean('set_nsfw_flair_on_posts', False)
 
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini
@@ -310,7 +298,7 @@ class RedditIO(threading.Thread, LogicMixin):
 			elif generated_text.startswith('<|soss|>'):
 
 				# Post the submission to reddit
-				submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters)
+				submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters, nsfw=self._set_nsfw_flair_on_posts)
 
 			if not submission_praw_thing:
 				# no submission has been made
