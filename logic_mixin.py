@@ -84,7 +84,12 @@ class LogicMixin():
 
 			elif isinstance(loop_thing, praw_Message):
 
-				tagged_text = f'<|sor|>{loop_thing.body}<|eor|>'
+				if not loop_thing.parent_id:
+					# If parent_id property is None then it is the first message of the chain
+					tagged_text = f'<|sot>{loop_thing.subject}<|eot|><|sor|>{loop_thing.body}<|eor|>'
+				else:
+					tagged_text = f'<|sor|>{loop_thing.body}<|eor|>'
+
 				prefix = tagged_text + prefix
 
 				if loop_thing.parent_id:
