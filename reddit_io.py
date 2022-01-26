@@ -37,6 +37,8 @@ class RedditIO(threading.Thread, LogicMixin):
 			'truncate': '<|eo',
 	}
 
+	_subreddit_flair_id_map = {}
+
 	def __init__(self, bot_username):
 		threading.Thread.__init__(self)
 
@@ -56,9 +58,9 @@ class RedditIO(threading.Thread, LogicMixin):
 		self._subreddit = self._config[self._bot_username].get('subreddit', 'test').strip()
 		logging.info(f"Bot subreddit has been set to r/{self._subreddit}.")
 
-		self._new_submission_flair_id = self._config[self._bot_username].get('submission_flair_id', None)
-		if self._new_submission_flair_id:
-			logging.info(f"The flair ID has been set to {self._new_submission_flair_id}!")
+		subreddit_flair_id_string = self._config[self._bot_username].get('subreddit_flair_id_map', '')
+		if subreddit_flair_id_string:
+			self._subreddit_flair_id_map = {y[0].lower(): int(y[1]) for y in [x.split('=') for x in subreddit_flair_id_string.split(',')]}
 
 		self._new_submission_frequency = timedelta(hours=int(self._config[self._bot_username].getint('post_frequency', 0)))
 		logging.info(f"Post frequency has been set to {self._new_submission_frequency}!")
@@ -281,7 +283,7 @@ class RedditIO(threading.Thread, LogicMixin):
 				logging.info(f"Submission text could not be found in generated text of job {post_job.id}")
 				continue
 
-			post_parameters['flair_id'] = self._new_submission_flair_id
+			post_parameters['flair_id'] = self._subreddit_flair_id_map.get(post_job.subreddit.lower(), None)
 
 			if generated_text.startswith('<|sols|>'):
 				# Get a list of images that match the search string
