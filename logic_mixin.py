@@ -64,11 +64,21 @@ class LogicMixin():
 
 				# prepend the tagged text
 				if loop_thing.is_self:
+
+					selftext = loop_thing.selftext
+
+					if hasattr(loop_thing, 'poll_data'):
+						# The submission has a poll - extract that data
+						for option in loop_thing.poll_data.options:
+							# Replicate unordered list markdown
+							selftext += f" - {option.text}"
+
 					# selftext submission
-					tagged_text = f"<|soss|><|sot|>{loop_thing.title}<|eot|><|sost|>{loop_thing.selftext}<|eost|>"
+					tagged_text = f"<|soss|><|sot|>{loop_thing.title}<|eot|><|sost|>{selftext}<|eost|>"
+
 				else:
 					# it's a link submission
-					tagged_text = f"<|sols|><|sot|>{loop_thing.title}<|eot|><|sol|>{loop_thing.selftext}<|eol|>"
+					tagged_text = f"<|sols|><|sot|>{loop_thing.title}<|eot|><|sol|><|eol|>"
 
 				prefix = tagged_text + prefix
 
