@@ -56,8 +56,10 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		self._keyword_helper = KeywordHelper(self._bot_username)
 
-		self._subreddit = self._config[self._bot_username].get('subreddit', 'test').strip()
-		logging.info(f"Bot subreddit has been set to r/{self._subreddit}.")
+		subreddits_config_string = self._config[self._bot_username].get('subreddits', 'test')
+		self._subreddits = [x.strip() for x in subreddits_config_string.lower().split(',')]
+
+		logging.info(f"Bot will reply to comments on subreddits: {', '.join(self._subreddits)}.")
 
 		subreddit_flair_id_string = self._config[self._bot_username].get('subreddit_flair_id_map', '')
 		if subreddit_flair_id_string != '':
@@ -138,7 +140,7 @@ class RedditIO(threading.Thread, LogicMixin):
 			record = self.is_praw_thing_in_database(praw_thing)
 
 			if not record:
-				logging.info(f"New {praw_thing.type} received in inbox, {praw_thing.id}")
+				logging.info(f"New message received in inbox, {praw_thing.id}")
 
 				reply_probability = self.calculate_reply_probability(praw_thing)
 
@@ -157,7 +159,7 @@ class RedditIO(threading.Thread, LogicMixin):
 	def poll_incoming_streams(self):
 
 		# Setup all the streams for new comments and submissions
-		sr = self._praw.subreddit(self._subreddit)
+		sr = self._praw.subreddit('+'.join(self._subreddits))
 		submissions = sr.stream.submissions(pause_after=0)
 		comments = sr.stream.comments(pause_after=0)
 
@@ -170,7 +172,7 @@ class RedditIO(threading.Thread, LogicMixin):
 			# If the thing is already in the database then we've already calculated a reply for it.
 			if not record:
 				thing_label = 'comment' if isinstance(praw_thing, praw_Comment) else 'submission'
-				logging.info(f"New {thing_label} thing received {praw_thing.name}")
+				logging.info(f"New {thing_label} thing received {praw_thing.name} from {praw_thing.subreddit}")
 
 				reply_probability = self.calculate_reply_probability(praw_thing)
 
