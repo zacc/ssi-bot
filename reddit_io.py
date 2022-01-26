@@ -38,6 +38,7 @@ class RedditIO(threading.Thread, LogicMixin):
 	}
 
 	_subreddit_flair_id_map = {}
+	_new_submission_schedule = []
 
 	def __init__(self, bot_username):
 		threading.Thread.__init__(self)
@@ -59,18 +60,20 @@ class RedditIO(threading.Thread, LogicMixin):
 		logging.info(f"Bot subreddit has been set to r/{self._subreddit}.")
 
 		subreddit_flair_id_string = self._config[self._bot_username].get('subreddit_flair_id_map', '')
-		if subreddit_flair_id_string:
+		if subreddit_flair_id_string != '':
 			self._subreddit_flair_id_map = {y[0].lower(): int(y[1]) for y in [x.split('=') for x in subreddit_flair_id_string.split(',')]}
 
-		self._new_submission_frequency = timedelta(hours=int(self._config[self._bot_username].getint('post_frequency', 0)))
-		logging.info(f"Post frequency has been set to {self._new_submission_frequency}!")
+		new_submission_schedule_string = self._config[self._bot_username].get('new_submission_schedule', '')
+		if new_submission_schedule_string != '':
+			self._new_submission_schedule = [(y[0].lower(), int(y[1])) for y in [x.split('=') for x in new_submission_schedule_string.split(',')]]
+			logging.info(f"New submission schedule: {self._new_submission_schedule}")
 
 		self._image_post_frequency = self._config[self._bot_username].getfloat('image_post_frequency', 0)
 		logging.info(f"Image post frequency has been set to the default of {(self._image_post_frequency * 100)}%.")
 
 		self._image_post_search_prefix = self._config[self._bot_username].get('image_post_search_prefix', '')
 
-		self._set_nsfw_flair_on_posts = self._config[self._bot_username].getboolean('set_nsfw_flair_on_posts', False)
+		self._set_nsfw_flair_on_submissions = self._config[self._bot_username].getboolean('set_nsfw_flair_on_submissions', False)
 
 		self._inbox_replies_enabled = self._config[self._bot_username].getboolean('enable_inbox_replies', False)
 
@@ -112,9 +115,10 @@ class RedditIO(threading.Thread, LogicMixin):
 				logging.exception("Exception occurred while processing the outgoing new submission jobs")
 
 			try:
-				if self._new_submission_frequency.seconds > 0:
-					logging.info(f"Beginning to attempt to schedule a new submission")
-					self.schedule_new_submission()
+				logging.info(f"Beginning to attempt to schedule a new submission")
+
+				for subreddit, frequency in self._new_submission_schedule:
+					self.schedule_new_submission(subreddit, frequency)
 			except:
 				logging.exception("Exception occurred while scheduling a new submission")
 
@@ -311,7 +315,7 @@ class RedditIO(threading.Thread, LogicMixin):
 			elif generated_text.startswith('<|soss|>'):
 
 				# Post the submission to reddit
-				submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters, nsfw=self._set_nsfw_flair_on_posts)
+				submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters, nsfw=self._set_nsfw_flair_on_submissions)
 
 			if not submission_praw_thing:
 				# no submission has been made
@@ -360,15 +364,15 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		return db_Thing.create(**record_dict)
 
-	def schedule_new_submission(self):
+	def schedule_new_submission(self, subreddit, hourly_frequency):
 		# Attempt to schedule a new submission
 		# Check that one has not been completed or in the process of, before submitting
 
 		# First, find all new submissions for this subreddit that fall within the new submission timeframe
-		all_recent_new_submissions = (db_Thing.select(db_Thing).where(fn.Lower(db_Thing.subreddit) == self._subreddit.lower()).
+		all_recent_new_submissions = (db_Thing.select(db_Thing).where(fn.Lower(db_Thing.subreddit) == subreddit.lower()).
 					where(db_Thing.source_name == 't3_new_submission').
 					where(db_Thing.bot_username == self._bot_username).
-					where(db_Thing.created_utc > (datetime.utcnow() - self._new_submission_frequency)))
+					where(db_Thing.created_utc > (datetime.utcnow() - timedelta(hours=hourly_frequency))))
 
 		# Extend the first query to filter successful submissions
 		recent_successful_submissions = list(all_recent_new_submissions.
@@ -376,7 +380,7 @@ class RedditIO(threading.Thread, LogicMixin):
 			where(db_Thing.bot_username == self._bot_username))
 
 		if recent_successful_submissions:
-			logging.info(f"A submission was made within the last {self._new_submission_frequency} on {self._subreddit}")
+			logging.info(f"A submission was made within the last {hourly_frequency} on {subreddit}")
 			return
 
 		# Extend the first query to find ones that are still being processed and not yet submitted
@@ -384,16 +388,16 @@ class RedditIO(threading.Thread, LogicMixin):
 			where((db_Thing.text_generation_attempts < 3) & (db_Thing.reddit_post_attempts < 1)))
 
 		if recent_pending_submissions:
-			logging.info(f"A submission for {self._subreddit} is still being processed in the queue")
+			logging.info(f"A submission for {subreddit} is still being processed in the queue")
 			return
 
-		logging.info(f"Scheduling a new submission on {self._subreddit}")
+		logging.info(f"Scheduling a new submission on {subreddit}")
 
 		new_submission_thing = {}
 
 		new_submission_thing['source_name'] = 't3_new_submission'
 		new_submission_thing['bot_username'] = self._bot_username
-		new_submission_thing['subreddit'] = self._subreddit
+		new_submission_thing['subreddit'] = subreddit
 
 		text_generation_parameters = self._default_text_generation_parameters.copy()
 		text_generation_parameters['prompt'] = self._get_random_new_submission_tag()
