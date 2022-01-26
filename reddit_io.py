@@ -25,7 +25,6 @@ class RedditIO(threading.Thread, LogicMixin):
 	so decided to keep all praw tasks in one daemon
 	"""
 	daemon = True
-	name = "RedditIOThread"
 
 	_praw = None
 
@@ -38,8 +37,13 @@ class RedditIO(threading.Thread, LogicMixin):
 			'truncate': '<|eo',
 	}
 
-	def __init__(self):
+	def __init__(self, bot_username):
 		threading.Thread.__init__(self)
+
+		self._bot_username = bot_username
+
+		# daemon Thread for logging
+		self.name = self._bot_username
 
 		# seed the random generator
 		random.seed()
@@ -47,30 +51,30 @@ class RedditIO(threading.Thread, LogicMixin):
 		self._config = ConfigParser()
 		self._config.read('ssi-bot.ini')
 
-		self._keyword_helper = KeywordHelper()
+		self._keyword_helper = KeywordHelper(self._bot_username)
 
-		self._subreddit = self._config['DEFAULT'].get('subreddit', 'test').strip()
+		self._subreddit = self._config[self._bot_username].get('subreddit', 'test').strip()
 		logging.info(f"Bot subreddit has been set to r/{self._subreddit}.")
 
-		self._new_submission_flair_id = self._config['DEFAULT'].get('submission_flair_id', None)
+		self._new_submission_flair_id = self._config[self._bot_username].get('submission_flair_id', None)
 		if self._new_submission_flair_id:
 			logging.info(f"The flair ID has been set to {self._new_submission_flair_id}!")
 
-		self._new_submission_frequency = timedelta(hours=int(self._config['DEFAULT'].getint('post_frequency', 0)))
+		self._new_submission_frequency = timedelta(hours=int(self._config[self._bot_username].getint('post_frequency', 0)))
 		logging.info(f"Post frequency has been set to {self._new_submission_frequency}!")
 
-		self._image_post_frequency = self._config['DEFAULT'].getfloat('image_post_frequency', 0)
+		self._image_post_frequency = self._config[self._bot_username].getfloat('image_post_frequency', 0)
 		logging.info(f"Image post frequency has been set to the default of {(self._image_post_frequency * 100)}%.")
 
-		self._image_post_search_prefix = self._config['DEFAULT'].get('image_post_search_prefix', '')
+		self._image_post_search_prefix = self._config[self._bot_username].get('image_post_search_prefix', '')
 
-		self._set_nsfw_flair_on_posts = self._config['DEFAULT'].getboolean('set_nsfw_flair_on_posts', False)
+		self._set_nsfw_flair_on_posts = self._config[self._bot_username].getboolean('set_nsfw_flair_on_posts', False)
 
-		self._inbox_replies_enabled = self._config['DEFAULT'].getboolean('enable_inbox_replies', False)
+		self._inbox_replies_enabled = self._config[self._bot_username].getboolean('enable_inbox_replies', False)
 
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini
-		self._praw = praw.Reddit(config_interpolation="basic")
+		self._praw = praw.Reddit(self._bot_username)
 
 	def run(self):
 
@@ -339,12 +343,14 @@ class RedditIO(threading.Thread, LogicMixin):
 	def is_praw_thing_in_database(self, praw_thing):
 		# Note that this is using the prefixed reddit id, ie t3_, t1_
 		# do not mix it with the unprefixed version which is called id!
-		record = db_Thing.get_or_none(db_Thing.source_name == praw_thing.name)
+		# Filter by the bot username
+		record = db_Thing.get_or_none(db_Thing.source_name == praw_thing.name, db_Thing.bot_username == self._bot_username)
 		return record
 
 	def insert_praw_thing_into_database(self, praw_thing, text_generation_parameters=None):
 		record_dict = {}
 		record_dict['source_name'] = praw_thing.name
+		record_dict['bot_username'] = self._bot_username
 
 		if text_generation_parameters:
 			# If we want to generate a text reply, then include these parameters in the record
@@ -359,10 +365,13 @@ class RedditIO(threading.Thread, LogicMixin):
 		# First, find all new submissions for this subreddit that fall within the new submission timeframe
 		all_recent_new_submissions = (db_Thing.select(db_Thing).where(fn.Lower(db_Thing.subreddit) == self._subreddit.lower()).
 					where(db_Thing.source_name == 't3_new_submission').
+					where(db_Thing.bot_username == self._bot_username).
 					where(db_Thing.created_utc > (datetime.utcnow() - self._new_submission_frequency)))
 
 		# Extend the first query to filter successful submissions
-		recent_successful_submissions = list(all_recent_new_submissions.where(db_Thing.posted_name.is_null(False)))
+		recent_successful_submissions = list(all_recent_new_submissions.
+			where(db_Thing.posted_name.is_null(False)).
+			where(db_Thing.bot_username == self._bot_username))
 
 		if recent_successful_submissions:
 			logging.info(f"A submission was made within the last {self._new_submission_frequency} on {self._subreddit}")
@@ -381,6 +390,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		new_submission_thing = {}
 
 		new_submission_thing['source_name'] = 't3_new_submission'
+		new_submission_thing['bot_username'] = self._bot_username
 		new_submission_thing['subreddit'] = self._subreddit
 
 		text_generation_parameters = self._default_text_generation_parameters.copy()
@@ -396,6 +406,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		# but not a reddit post attempt
 		return list(db_Thing.select(db_Thing).
 					where(db_Thing.source_name != 't3_new_submission').
+					where(db_Thing.bot_username == self._bot_username).
 					where(db_Thing.reddit_post_attempts < 1).
 					where(db_Thing.generated_text.is_null(False)).
 					where(db_Thing.posted_name.is_null()))
@@ -405,6 +416,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		# but not a reddit post attempt
 		return list(db_Thing.select(db_Thing).
 					where(db_Thing.source_name == 't3_new_submission').
+					where(db_Thing.bot_username == self._bot_username).
 					where(db_Thing.reddit_post_attempts < 1).
 					where(db_Thing.generated_text.is_null(False)).
 					where(db_Thing.posted_name.is_null()))
