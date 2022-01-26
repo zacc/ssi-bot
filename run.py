@@ -11,7 +11,7 @@ from db import create_db_tables
 def main():
 
 	# enable minimal logging with a custom format showing the bot's username
-	NEW_LOG_FORMAT = logging.BASIC_FORMAT
+	NEW_LOG_FORMAT = '%(asctime)s (%(threadName)s) %(levelname)s %(message)s'
 	logging.basicConfig(format=NEW_LOG_FORMAT, level=logging.INFO)
 
 	# Create the database. If the table already exists, nothing will happen

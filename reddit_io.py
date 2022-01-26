@@ -45,7 +45,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		self._bot_username = bot_username
 
 		# daemon Thread for logging
-		self.name = self._bot_username
+		self.name = f"{self._bot_username}_io"
 
 		# seed the random generator
 		random.seed()
