@@ -10,7 +10,7 @@ from configparser import ConfigParser
 from datetime import datetime, timedelta
 
 import praw
-from praw.models import (Submission as praw_Submission, Comment as praw_Comment)
+from praw.models import (Submission as praw_Submission, Comment as praw_Comment, Message as praw_Message)
 
 from logic_mixin import LogicMixin
 
@@ -78,6 +78,8 @@ class RedditIO(threading.Thread, LogicMixin):
 		if self._config['DEFAULT']['image_post_search_prefix']:
 			self._image_post_search_prefix = self._config['DEFAULT']['image_post_search_prefix']
 
+		self._inbox_replies_enabled = self._config['DEFAULT'].getboolean('enable_inbox_replies', False)
+
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini
 		self._praw = praw.Reddit(config_interpolation="basic")
@@ -131,26 +133,28 @@ class RedditIO(threading.Thread, LogicMixin):
 			if praw_thing is None:
 				break
 
-			if isinstance(praw_thing, praw_Comment):
+			if isinstance(praw_thing, praw_Message) and not self._inbox_replies_enabled:
+				# Skip if it's an inbox message and replies are disabled
+				continue
 
-				record = self.is_praw_thing_in_database(praw_thing)
+			record = self.is_praw_thing_in_database(praw_thing)
 
-				if not record:
-					logging.info(f"New {praw_thing.type} received in inbox, {praw_thing.id}")
+			if not record:
+				logging.info(f"New {praw_thing.type} received in inbox, {praw_thing.id}")
 
-					reply_probability = self.calculate_reply_probability(praw_thing)
+				reply_probability = self.calculate_reply_probability(praw_thing)
 
-					text_generation_parameters = None
+				text_generation_parameters = None
 
-					if random.random() < reply_probability:
-						# It will generate a reply, so grab the parameters before we put it into the database
-						text_generation_parameters = self.get_text_generation_parameters(praw_thing)
+				if random.random() < reply_probability:
+					# It will generate a reply, so grab the parameters before we put it into the database
+					text_generation_parameters = self.get_text_generation_parameters(praw_thing)
 
-					# insert it into the database
-					self.insert_praw_thing_into_database(praw_thing, text_generation_parameters)
+				# insert it into the database
+				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters)
 
-				# mark the inbox item read
-				praw_thing.mark_read()
+			# mark the inbox item read
+			praw_thing.mark_read()
 
 	def poll_incoming_streams(self):
 
@@ -213,6 +217,9 @@ class RedditIO(threading.Thread, LogicMixin):
 			elif post_job.source_name[:3] == 't3_':
 				# Submission
 				source_praw_thing = self._praw.submission(post_job.source_name[3:])
+			elif post_job.source_name[:3] == 't4_':
+				# Inbox message
+				source_praw_thing = self._praw.inbox.message(post_job.source_name[3:])
 
 			if not source_praw_thing:
 				# Couldn't get the source thing for some reason
@@ -235,7 +242,7 @@ class RedditIO(threading.Thread, LogicMixin):
 			if isinstance(source_praw_thing, praw_Submission):
 				# On a submission we'll only check the title
 				source_text_to_compare = source_praw_thing.title
-			elif isinstance(source_praw_thing, praw_Comment):
+			elif isinstance(source_praw_thing, praw_Comment) or isinstance(source_praw_thing, praw_Message):
 				source_text_to_compare = source_praw_thing.body
 
 			if source_text_to_compare and reply_parameters['body'] and\
