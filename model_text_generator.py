@@ -74,7 +74,7 @@ class ModelTextGenerator(threading.Thread):
 
 	def top_pending_jobs(self):
 		"""
-		Get a list of text that need text to be generated, by treating
+		Get a list of jobs that need text to be generated, by treating
 		each database Thing record as a 'job'.
 		Three attempts at text generation are allowed.
 

@@ -3,6 +3,7 @@ import time
 from configparser import ConfigParser
 
 from model_text_generator import ModelTextGenerator
+from daemon.scraper_text_to_image import ImageScraper
 from reddit_io import RedditIO
 
 from db import create_db_tables
@@ -34,6 +35,10 @@ def main():
 	# Start the text generation daemon
 	mtg = ModelTextGenerator()
 	mtg.start()
+
+	# Start the image scraper
+	imgscr = ImageScraper()
+	imgscr.start()
 
 	# Set up a game loop
 	# Cancel it with Ctrl-C

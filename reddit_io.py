@@ -37,6 +37,11 @@ class RedditIO(threading.Thread, LogicMixin):
 			'truncate': '<|eo',
 	}
 
+	_default_image_generation_parameters = {
+		'type': 'scraper',
+		'prompt': None,
+	}
+
 	_subreddit_flair_id_map = {}
 	_new_submission_schedule = []
 
@@ -71,13 +76,19 @@ class RedditIO(threading.Thread, LogicMixin):
 			logging.info(f"New submission schedule: {self._new_submission_schedule}")
 
 		self._image_post_frequency = self._config[self._bot_username].getfloat('image_post_frequency', 0)
-		logging.info(f"Image post frequency has been set to the default of {(self._image_post_frequency * 100)}%.")
+		logging.info(f"Image post frequency has been set to {(self._image_post_frequency * 100)}%.")
 
-		self._image_post_search_prefix = self._config[self._bot_username].get('image_post_search_prefix', '')
+		self._image_post_search_prefix = self._config[self._bot_username].get('image_post_search_prefix', None)
 
 		self._set_nsfw_flair_on_submissions = self._config[self._bot_username].getboolean('set_nsfw_flair_on_submissions', False)
 
 		self._inbox_replies_enabled = self._config[self._bot_username].getboolean('enable_inbox_replies', False)
+
+		self._submission_image_generator = self._config[self._bot_username].get('submission_image_generator', 'scraper')
+
+		if self._submission_image_generator is 'scraper':
+			# TODO import the parameters from scraper
+			pass
 
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini
@@ -289,35 +300,34 @@ class RedditIO(threading.Thread, LogicMixin):
 				logging.info(f"Submission text could not be found in generated text of job {post_job.id}")
 				continue
 
+			if post_job.generated_image_path:
+				# If an image has been generated for this job
+
+				if post_job.generated_image_path.startswith('http'):
+					# it's actually a HTTP url
+					post_parameters['url'] = post_job.generated_image_path
+				else:
+					# Otherwise assume it's on the file system and we can upload it to reddit
+					post_parameters['image_path'] = post_job.generated_image_path
+
 			post_parameters['flair_id'] = self._subreddit_flair_id_map.get(post_job.subreddit.lower(), None)
 
-			if generated_text.startswith('<|sols|>'):
-				# Get a list of images that match the search string
-				image_urls = self.find_image_urls_for_search_string(post_parameters['title'])
+			if 'image_path' in post_parameters:
+				submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit_image(**post_parameters, nsfw=self._set_nsfw_flair_on_submissions)
 
-				if not image_urls:
-					logging.info(f"Could not get any images for the submission: {post_parameters['title']}")
-					continue
-
-				for image_url in image_urls:
-					post_parameters['url'] = image_url
-
-					try:
-						# Post the submission to reddit
-						submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters)
-						break
-
-					except praw.exceptions.RedditAPIException as e:
-						if 'DOMAIN_BANNED' in str(e):
-							# continue and try again with another image_url
-							continue
-						# Otherwise raise the exception
+			else:
+				try:
+					# Sometimes url links posted are banned by reddit.
+					# It will raise a DOMAIN_BANNED exception
+					submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters, nsfw=self._set_nsfw_flair_on_submissions)
+				except praw.exceptions.RedditAPIException as e:
+					if 'DOMAIN_BANNED' in str(e):
+						# 'Reset' the generated image and try again
+						post_job.generated_image_path = None
+						post_job.reddit_post_attempts = 0
+						post_job.save()
+					else:
 						raise e
-
-			elif generated_text.startswith('<|soss|>'):
-
-				# Post the submission to reddit
-				submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters, nsfw=self._set_nsfw_flair_on_submissions)
 
 			if not submission_praw_thing:
 				# no submission has been made
@@ -382,10 +392,11 @@ class RedditIO(threading.Thread, LogicMixin):
 			where(db_Thing.bot_username == self._bot_username))
 
 		if recent_successful_submissions:
-			logging.info(f"A submission was made within the last {hourly_frequency} on {subreddit}")
+			logging.info(f"A submission was made within the last {hourly_frequency} hours on {subreddit}")
 			return
 
 		# Extend the first query to find ones that are still being processed and not yet submitted
+		# TODO fix this to differentiate between text and image submissions
 		recent_pending_submissions = list(all_recent_new_submissions.where(db_Thing.posted_name.is_null()).
 			where((db_Thing.text_generation_attempts < 3) & (db_Thing.reddit_post_attempts < 1)))
 
@@ -402,10 +413,16 @@ class RedditIO(threading.Thread, LogicMixin):
 		new_submission_thing['subreddit'] = subreddit
 
 		text_generation_parameters = self._default_text_generation_parameters.copy()
-		text_generation_parameters['prompt'] = self._get_random_new_submission_tag()
+		new_submission_tag = self._get_random_new_submission_tag()
+		text_generation_parameters['prompt'] = new_submission_tag
 		text_generation_parameters['max_length'] = 1000
-
 		new_submission_thing['text_generation_parameters'] = text_generation_parameters
+
+		if new_submission_tag.startswith('<|sols|>'):
+			print('its a link submission')
+			image_generation_parameters = self._default_image_generation_parameters.copy()
+			image_generation_parameters['prompt'] = self._image_post_search_prefix
+			new_submission_thing['image_generation_parameters'] = image_generation_parameters
 
 		return db_Thing.create(**new_submission_thing)
 
@@ -422,12 +439,25 @@ class RedditIO(threading.Thread, LogicMixin):
 	def pending_new_submission_jobs(self):
 		# A list of pending Submission Things from the database that have had text generated,
 		# but not a reddit post attempt
-		return list(db_Thing.select(db_Thing).
+
+		# Base criteria
+		query = (db_Thing.select(db_Thing).
 					where(db_Thing.source_name == 't3_new_submission').
 					where(db_Thing.bot_username == self._bot_username).
 					where(db_Thing.reddit_post_attempts < 1).
 					where(db_Thing.generated_text.is_null(False)).
 					where(db_Thing.posted_name.is_null()))
+
+		# Extra where query to include selftext and image queries
+		# query.where((db_Thing.image_generation_parameters.is_null()) | (db_Thing.generated_image_path.is_null(False)))
+
+		text_jobs = query.where(db_Thing.image_generation_parameters.is_null(True))
+		image_jobs = query.where(db_Thing.generated_image_path.is_null(False))
+		print('text jobs', list(text_jobs))
+		print('image jobs', list(image_jobs))
+
+		return list(set(text_jobs + image_jobs))
+		# return image_jobs
 
 	def _find_depth_of_comment(self, praw_comment):
 		"""

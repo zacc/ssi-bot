@@ -21,6 +21,9 @@ class LogicMixin():
 	while taking updates on the main classes.
 	"""
 
+	_title_start_tag = '<|sot|>'
+	_end_tag = '<|'
+
 	def _get_reply_tag(self, praw_thing):
 		"""
 		Get the reply tag to use.
@@ -33,7 +36,7 @@ class LogicMixin():
 		return '<|sor|>'
 
 	def _get_random_new_submission_tag(self):
-		random.seed()
+		# random is already seeded in reddit_io init
 		random_value = random.random()
 
 		if random_value < self._image_post_frequency:
@@ -273,6 +276,17 @@ class LogicMixin():
 		# Return nothing
 		return {}
 
+	def extract_title_from_generated_text(self, generated_text):
+
+		idx_title_start = generated_text.find(self._title_start_tag)
+		idx_title_end = generated_text.find(self._end_tag, (idx_title_start + len(self._title_start_tag)))
+
+		if idx_title_start == -1 or idx_title_end == -1:
+			# There must be at least a complete title to make a submission
+			return None
+
+		return generated_text[idx_title_start + len(self._title_start_tag):idx_title_end]
+
 	def extract_submission_text_from_generated_text(self, prompt, generated_text):
 
 		return_dict = {}
@@ -319,43 +333,3 @@ class LogicMixin():
 			return_dict['selftext'] = generated_text[idx_selftext_start + len(selftext_start_tag):idx_selftext_end]
 
 		return return_dict
-
-	def find_image_urls_for_search_string(self, search_string, limit=3):
-
-		logging.info(f"Searching on Bing for an image for: \"{search_string}\"")
-
-		return_list = []
-
-		# Truncate to the first 10 words to improve effectiveness of the search
-		search_terms = ' '.join(search_string.split()[:10])
-
-		# If it exists, add the prefix to improve results
-		if self._image_post_search_prefix:
-			search_terms = self._image_post_search_prefix + ' ' + search_terms
-
-		# Collect and encode all search url parameters
-		search_parameters = {'q': search_terms,
-							'FORM': 'HDRSC2',
-							'safeSearch': 'strict'}
-
-		encoded_search_parameters = urllib.parse.urlencode(search_parameters)
-		search_url = "https://www.bing.com/images/search?" + encoded_search_parameters
-
-		# Use Win10 Edge User Agent
-		header = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36 Edg/92.0.902.78"}
-
-		r = requests.get(search_url, headers=header)
-
-		if r.ok:
-			soup = BeautifulSoup(r.text, 'html.parser')
-			link_results = soup.find_all("a", {"class": "iusc"})
-
-			for link in link_results:
-				if link.has_attr('m'):
-					# convert json in the link's attributes into a python dict
-					m = json.loads(link["m"])
-					if 'murl' in m:
-						return_list.append(m['murl'])
-
-		logging.info(f"Found {len(return_list)} images, returning top {limit}")
-		return return_list[:limit]

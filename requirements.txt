@@ -1,6 +1,8 @@
 beautifulsoup4
+nltk
 peewee
 praw
+pytest
 requests
 simpletransformers
 torch

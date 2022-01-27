@@ -6,6 +6,7 @@ models/*
 model_finetuning/json_data/*
 model_finetuning/*.sqlite3
 model_finetuning/dataset.ini
+model_finetuning/training_output*
 cache_dir/*
 
 # Byte-compiled / optimized / DLL files
