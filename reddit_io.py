@@ -63,11 +63,11 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		subreddit_flair_id_string = self._config[self._bot_username].get('subreddit_flair_id_map', '')
 		if subreddit_flair_id_string != '':
-			self._subreddit_flair_id_map = {y[0].lower(): int(y[1]) for y in [x.split('=') for x in subreddit_flair_id_string.split(',')]}
+			self._subreddit_flair_id_map = {y[0].lower().strip(): y[1].strip() for y in [x.split('=') for x in subreddit_flair_id_string.split(',')]}
 
 		new_submission_schedule_string = self._config[self._bot_username].get('new_submission_schedule', '')
 		if new_submission_schedule_string != '':
-			self._new_submission_schedule = [(y[0].lower(), int(y[1])) for y in [x.split('=') for x in new_submission_schedule_string.split(',')]]
+			self._new_submission_schedule = [(y[0].lower().strip(), int(y[1])) for y in [x.split('=') for x in new_submission_schedule_string.split(',')]]
 			logging.info(f"New submission schedule: {self._new_submission_schedule}")
 
 		self._image_post_frequency = self._config[self._bot_username].getfloat('image_post_frequency', 0)
