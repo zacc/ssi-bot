@@ -8,8 +8,6 @@ import threading
 import time
 import urllib.parse
 
-from os.path import basename
-
 from bs4 import BeautifulSoup
 from nltk import tokenize
 
@@ -73,8 +71,6 @@ class ImageScraper(threading.Thread, LogicMixin):
 
 		# pop the prompt out from the args
 		prompt = image_generation_parameters.pop('prompt')
-
-		return_list = []
 
 		# split the search string into sentences
 		sentences = tokenize.sent_tokenize(search_string)
