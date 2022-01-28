@@ -70,7 +70,7 @@ class ImageScraper(threading.Thread, LogicMixin):
 		logging.info(f"Searching on Bing for an image for: \"{search_string}\"")
 
 		# pop the prompt out from the args
-		prompt = image_generation_parameters.pop('prompt')
+		prompt = image_generation_parameters.pop('prompt', None)
 
 		# split the search string into sentences
 		sentences = tokenize.sent_tokenize(search_string)
