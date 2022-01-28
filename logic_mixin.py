@@ -21,7 +21,15 @@ class LogicMixin():
 	while taking updates on the main classes.
 	"""
 
+	_link_submission_start_tag = '<|sols|>'
+	_selftext_submission_start_tag = '<|soss|>'
+
 	_title_start_tag = '<|sot|>'
+	_selftext_start_tag = '<|sost|>'
+
+	_reply_start_tag = '<|sor|>'
+	_reply_end_tag = '<|eor|>'
+
 	_end_tag = '<|'
 
 	def _get_reply_tag(self, praw_thing):
@@ -33,7 +41,7 @@ class LogicMixin():
 		"""
 
 		# It's just a straight reply
-		return '<|sor|>'
+		return self._reply_start_tag
 
 	def _get_random_new_submission_tag(self):
 		# random is already seeded in reddit_io init
@@ -41,10 +49,10 @@ class LogicMixin():
 
 		if random_value < self._image_post_frequency:
 			# Make a link (image) post
-			return '<|sols|><|sot|>'
+			return self._link_submission_start_tag + self._title_start_tag
 		else:
 			# Make a text post
-			return '<|soss|><|sot|>'
+			return self._selftext_submission_start_tag + self._title_start_tag
 
 	def _collate_tagged_comment_history(self, praw_thing, to_level=6):
 		"""
@@ -244,13 +252,13 @@ class LogicMixin():
 		# multiply the rate of decay by the reply probability
 		return reply_probability * rate_of_decay
 
-	def extract_reply_from_generated_text(self, prompt, generated_text, truncate):
+	def extract_reply_from_generated_text(self, prompt, generated_text):
 
 		# remove any cruft
 		generated_text = generated_text.replace('&amp;#x200B;\n', '')
 
 		# find the first instance of the end-of-comment tag, starting from the end of the prompt
-		index_of_truncate = generated_text.find(truncate, len(prompt))
+		index_of_truncate = generated_text.find(self._end_tag, len(prompt))
 
 		if index_of_truncate == -1:
 			# the original truncate tag couldn't be found,
@@ -287,49 +295,45 @@ class LogicMixin():
 
 		return generated_text[idx_title_start + len(self._title_start_tag):idx_title_end]
 
-	def extract_submission_text_from_generated_text(self, prompt, generated_text):
+	def extract_selftext_from_generated_text(self, generated_text):
+
+		idx_st_start = generated_text.find(self._selftext_start_tag)
+		idx_st_end = generated_text.find(self._end_tag, (idx_st_start + len(self._selftext_start_tag)))
+
+		if idx_st_start == -1 or idx_st_end == -1:
+			return None
+
+		title_text = generated_text[idx_st_start + len(self._selftext_start_tag):idx_st_end]
+
+		if (0 < len(title_text) < 300):
+			# Validate the title length is within reddit's range
+			return title_text
+
+	def extract_submission_from_generated_text(self, generated_text):
 
 		return_dict = {}
 
 		# remove any cruft
 		generated_text = generated_text.replace('&amp;#x200B;\n', '')
 
-		title_start_tag = '<|sot|>'
-		title_end_tag = '<|eot|>'
+		title = self.extract_title_from_generated_text(generated_text)
 
-		idx_title_start = generated_text.find(title_start_tag)
-		idx_title_end = generated_text.find(title_end_tag)
-
-		if idx_title_start == -1 or idx_title_end == -1:
-			# There must be at least a complete title to make a submission
+		if not title:
 			return {}
+		else:
+			# The title is ok, add it to the dict to return
+			return_dict['title'] = title
 
-		title = generated_text[idx_title_start + len(title_start_tag):idx_title_end]
+		selftext = self.extract_selftext_from_generated_text(generated_text)
 
-		if not (0 < len(title) < 300):
-			# Validate the title length is within reddit's range
-			return {}
-
-		# The title is ok, add it to the dict to return
-		return_dict['title'] = title
-
-		if generated_text.startswith('<|soss|>'):
-			selftext_start_tag = '<|sost|>'
-			selftext_end_tag = '<|eost|>'
-
-			# Find the start and end tags of the main text, starting from the end of the title
-			idx_selftext_start = generated_text.find(selftext_start_tag, idx_title_end)
-			idx_selftext_end = generated_text.find(selftext_end_tag, idx_title_end)
-
-			if idx_selftext_start == -1 or idx_selftext_end == -1:
-				# Both tags should be found
-				return {}
-
-			print(idx_selftext_start, (idx_title_end + len(title_end_tag)))
-			if idx_selftext_start != (idx_title_end + len(title_end_tag)):
-				# check that the main text immediately follows the title end
-				return {}
-
-			return_dict['selftext'] = generated_text[idx_selftext_start + len(selftext_start_tag):idx_selftext_end]
+		if selftext:
+			return_dict['selftext'] = selftext
 
 		return return_dict
+
+	def validate_new_submission_text(self):
+		pass
+
+	def validate_reply_text(self):
+		pass
+

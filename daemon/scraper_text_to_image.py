@@ -92,7 +92,7 @@ class ImageScraper(threading.Thread, LogicMixin):
 							'form': 'HDRSC2',
 							# 'qft': '+filterui:imagesize-large',
 							'safeSearch': 'strict',
-							'first': int(-9 + (attempt * 10))}
+							'first': int(1 + (attempt * 10))}
 
 		encoded_search_parameters = urllib.parse.urlencode(search_parameters)
 		search_url = "https://www.bing.com/images/search?" + encoded_search_parameters

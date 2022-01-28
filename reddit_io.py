@@ -34,7 +34,6 @@ class RedditIO(threading.Thread, LogicMixin):
 			'prompt': None,
 			'temperature': 0.8,
 			'top_k': 40,
-			'truncate': '<|eo',
 	}
 
 	_default_image_generation_parameters = {
@@ -236,7 +235,7 @@ class RedditIO(threading.Thread, LogicMixin):
 				return
 
 			reply_parameters = self.extract_reply_from_generated_text(\
-				post_job.text_generation_parameters['prompt'], post_job.generated_text, post_job.text_generation_parameters['truncate'])
+				post_job.text_generation_parameters['prompt'], post_job.generated_text)
 
 			if not reply_parameters:
 				logging.info(f"Reply body could not be found in generated text of job {post_job.id}")
@@ -297,7 +296,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			generated_text = post_job.generated_text
 
-			post_parameters = self.extract_submission_text_from_generated_text(\
+			post_parameters = self.extract_submission_from_generated_text(\
 				post_job.text_generation_parameters['prompt'], generated_text)
 
 			if not post_parameters:
@@ -419,7 +418,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		text_generation_parameters['max_length'] = 1000
 		new_submission_thing['text_generation_parameters'] = text_generation_parameters
 
-		if new_submission_tag.startswith('<|sols|>'):
+		if new_submission_tag.startswith(self._link_submission_start_tag):
 			print('its a link submission')
 			image_generation_parameters = self._default_image_generation_parameters.copy()
 			image_generation_parameters['prompt'] = self._image_post_search_prefix
