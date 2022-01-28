@@ -15,8 +15,8 @@ class KeywordHelper():
 		('fag', 'got'),
 		('hit', 'ler'), ('holo', 'caust'),
 		('inc', 'est'), ('israel'),
-		('jew', 'ish'), ('je', 'w'), ('je', 'ws'),
-		(' k', 'ill'), ('kk', 'k'),
+		('jew', 'ish'), ('je', 'ws'),
+		('k', 'ill'), ('kk', 'k'),
 		('lol', 'i'),
 		('maste', 'r race'), ('mus', 'lim'),
 		('nation', 'alist'), ('na', 'zi'), ('nig', 'ga'), ('nig', 'ger'),
@@ -42,10 +42,13 @@ class KeywordHelper():
 
 	def positive_keyword_matches(self, text):
 		if self._positive_keywords:
-			return [keyword for keyword in self._positive_keywords if re.search(r"\b{}\b".format(keyword), text, re.IGNORECASE)]
+			return [keyword for keyword in self._positive_keywords if re.search(r"\b{}".format(keyword), text, re.IGNORECASE)]
 		return []
 
 	def negative_keyword_matches(self, text):
+		# Negative keyword is matched with a starting boundary so basic word forms
+		# like plurals are matched, for example humans and humanoid would both match for just the keyword human.
+
 		if self._negative_keywords:
-			return [keyword for keyword in self._negative_keywords if re.search(r"\b{}\b".format(keyword), text, re.IGNORECASE)]
+			return [keyword for keyword in self._negative_keywords if re.search(r"\b{}".format(keyword), text, re.IGNORECASE)]
 		return []

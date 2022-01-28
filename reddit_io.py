@@ -335,6 +335,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		except praw.exceptions.RedditAPIException as e:
 			if 'DOMAIN_BANNED' in str(e):
+				# DOMAIN_BANNED exception can occur when the domain of a url/link post is blacklisted by reddit
 				bypass_finally = True
 				# 'Reset' the generated image and try again
 				post_job.generated_image_path = None
@@ -350,7 +351,6 @@ class RedditIO(threading.Thread, LogicMixin):
 				# This is to prevent posting too many times if there are errors
 				post_job.reddit_post_attempts += 1
 				post_job.save()
-
 
 	def synchronize_bots_comments_submissions(self):
 		# at first run, pick up Bot's own recent submissions and comments

@@ -336,4 +336,3 @@ class LogicMixin():
 
 	def validate_reply_text(self):
 		pass
-
