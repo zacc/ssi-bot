@@ -30,21 +30,22 @@ class ImageScraper(threading.Thread, LogicMixin):
 
 		while True:
 
-			try:
-				# get the top job in the list
-				jobs = self.top_pending_jobs()
+			# get the top job in the list
+			jobs = self.top_pending_jobs()
 
-				for job in jobs:
+			for job in jobs:
+
+				try:
 					logging.info(f"Starting to find an image for job_id {job.id}.")
-
-					job.image_generation_attempts += 1
-					job.save()
 
 					# Logic mixin extract title
 					title_text = self.extract_title_from_generated_text(job.generated_text)
+					if not title_text:
+						continue
+
 					image_url = self._download_image_for_search_string(title_text, job.image_generation_parameters, job.image_generation_attempts)
 
-					print('image_url', image_url)
+					print('found image_url', image_url)
 
 					if image_url:
 						job.generated_image_path = image_url
@@ -53,12 +54,18 @@ class ImageScraper(threading.Thread, LogicMixin):
 					# Sleep a bit here to not hammer the servers
 					time.sleep(10)
 
-				# Sleep a bit more to be nice to dem servers
-				# time.sleep(120)
-				time.sleep(10)
+				except:
+					logging.exception(f"Scraping image for a {job} failed")
 
-			except:
-				logging.exception("Scraping image for a job failed")
+				finally:
+					job.image_generation_attempts += 1
+					job.save()
+					print(f'job status is {job.status}')
+
+			# Sleep a bit more to be nice to dem servers
+			# time.sleep(120)
+			# Testing
+			time.sleep(10)
 
 	def _download_image_for_search_string(self, search_string, image_generation_parameters, attempt):
 
@@ -117,8 +124,6 @@ class ImageScraper(threading.Thread, LogicMixin):
 
 		query = db_Thing.select(db_Thing).\
 					where(db_Thing.image_generation_parameters['type'] == 'scraper').\
-					where(db_Thing.generated_image_path.is_null()).\
-					where(db_Thing.generated_text.is_null(False)).\
-					where(db_Thing.image_generation_attempts < 3).\
+					where(db_Thing.status == 5).\
 					order_by(db_Thing.created_utc)
 		return list(query)

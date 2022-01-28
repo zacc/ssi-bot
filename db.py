@@ -1,6 +1,7 @@
 import time
 
-from peewee import Model, IntegerField, TextField, TimestampField
+from peewee import IntegerField, TextField, TimestampField
+from playhouse.signals import Model, pre_save
 from playhouse.sqlite_ext import JSONField
 from playhouse.sqliteq import SqliteQueueDatabase
 
@@ -18,6 +19,8 @@ class Thing(Model):
 	# timestamp representation of when this record was entered into the database
 	created_utc = TimestampField(default=time.time, utc=True)
 	bot_username = TextField()
+
+	status = IntegerField(default=1)
 
 	# the praw *name* of the original comment or submission,
 	# where t3_ prefix = submission, t1_ = comment, t4_ = message
@@ -49,6 +52,48 @@ class Thing(Model):
 
 	class Meta:
 		database = db
+
+
+@pre_save(sender=Thing)
+def on_presave_handler(model_class, instance, created):
+	# This handler stores all business logic for how a thing/job status changes
+
+	# 9 = FAILED
+	# 8 = COMPLETE
+	# 7 = SUBMIT_READY
+	# 5 = IMAGE_GEN
+	# 3 = TEXT_GEN
+	# 1 = NEW
+
+	text_gen_attempts_allowed = 3
+	image_gen_attempts_allowed = 3
+	reddit_submit_attempts_allowed = 1
+
+	before_status = instance.status
+
+	if (instance.text_generation_attempts >= text_gen_attempts_allowed and instance.generate_text is None) or \
+		(instance.image_generation_attempts >= image_gen_attempts_allowed and instance.generated_image_path is None) or \
+		(instance.reddit_post_attempts >= reddit_submit_attempts_allowed and instance.posted_name is None):
+		# Attempts have been attempted and no content was created so fail the job
+		instance.status = 9
+
+	elif instance.posted_name is not None:
+		# If it has a posted_name then it's been posted to reddit and it's complete.
+		instance.status = 8
+
+	elif instance.text_generation_parameters and instance.generated_text is None:
+		# Thing has text gen parameters but hasn't yet generated text
+		instance.status = 3
+
+	elif instance.image_generation_parameters and instance.generated_image_path is None:
+		# Thing has image gen parameters but hasn't yet generated a path
+		instance.status = 5
+
+	elif instance.generated_text and (instance.generated_image_path or instance.image_generation_parameters is None):
+		# Text has been generated and either an image is ready or no image is to be made.
+		instance.status = 7
+
+	print(f'updating status of {instance} from {before_status} to {instance.status}')
 
 
 def create_db_tables():

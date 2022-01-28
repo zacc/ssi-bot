@@ -86,7 +86,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		self._submission_image_generator = self._config[self._bot_username].get('submission_image_generator', 'scraper')
 
-		if self._submission_image_generator is 'scraper':
+		if self._submission_image_generator == 'scraper':
 			# TODO import the parameters from scraper
 			pass
 
@@ -116,14 +116,16 @@ class RedditIO(threading.Thread, LogicMixin):
 			logging.info(f"Beginning to process outgoing post jobs")
 
 			try:
-				self.post_outgoing_reply_jobs()
+				for post_job in self.pending_reply_jobs():
+					self.post_outgoing_reply_jobs(post_job)
 			except:
 				logging.exception("Exception occurred while processing the outgoing reply jobs")
 
 			logging.info(f"Beginning to process outgoing new submission jobs")
 
 			try:
-				self.post_outgoing_new_submission_jobs()
+				for post_job in self.pending_new_submission_jobs():
+					self.post_outgoing_new_submission_jobs(post_job)
 			except:
 				logging.exception("Exception occurred while processing the outgoing new submission jobs")
 
@@ -208,16 +210,12 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			return text_generation_parameters
 
-	def post_outgoing_reply_jobs(self):
+	def post_outgoing_reply_jobs(self, post_job):
 
-		for post_job in self.pending_reply_jobs():
+		bypass_finally = False
 
+		try:
 			logging.info(f'Starting to post reply job {post_job.id} to reddit')
-
-			# Increment the post attempts counter.
-			# This is to prevent posting too many times if there are errors
-			post_job.reddit_post_attempts += 1
-			post_job.save()
 
 			# Get the praw object of the original thing we are going to reply to
 			source_praw_thing = None
@@ -235,14 +233,14 @@ class RedditIO(threading.Thread, LogicMixin):
 			if not source_praw_thing:
 				# Couldn't get the source thing for some reason
 				logging.error(f'Could not get the source praw thing for {post_job.id}')
-				continue
+				return
 
 			reply_parameters = self.extract_reply_from_generated_text(\
 				post_job.text_generation_parameters['prompt'], post_job.generated_text, post_job.text_generation_parameters['truncate'])
 
 			if not reply_parameters:
 				logging.info(f"Reply body could not be found in generated text of job {post_job.id}")
-				continue
+				return
 
 			# Begin to check whether the generated matches the text the bot is replying to.
 			# The model can get fixated on repeating words and it looks bad.
@@ -261,11 +259,12 @@ class RedditIO(threading.Thread, LogicMixin):
 				# The generated text is 95% similar to the previous comment (ie it's a boring duplicate)
 				logging.info(f"Job {post_job.id} had duplicated generated text.")
 
+				bypass_finally = True
 				# Clear the generated text on the post_job
 				# then it can try to re-generate it with a new random seed
 				post_job.generated_text = None
 				post_job.save()
-				continue
+				return
 
 			# Reply to the source thing with the generated text. A new praw_thing is returned
 			reply_praw_thing = source_praw_thing.reply(**reply_parameters)
@@ -279,17 +278,22 @@ class RedditIO(threading.Thread, LogicMixin):
 			post_job.save()
 
 			logging.info(f"Job {post_job.id} reply submitted successfully")
+		except Exception as e:
+			logging.exception(e)
 
-	def post_outgoing_new_submission_jobs(self):
+		finally:
+			if not bypass_finally:
+				# Increment the post attempts counter.
+				# This is to prevent posting too many times if there are errors
+				post_job.reddit_post_attempts += 1
+				post_job.save()
 
-		for post_job in self.pending_new_submission_jobs():
+	def post_outgoing_new_submission_jobs(self, post_job):
 
+		bypass_finally = False
+
+		try:
 			logging.info(f'Starting to post new submission job {post_job.id} to reddit')
-
-			# Increment the post attempts counter.
-			# This is to prevent posting too many times if there are errors
-			post_job.reddit_post_attempts += 1
-			post_job.save()
 
 			generated_text = post_job.generated_text
 
@@ -298,7 +302,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			if not post_parameters:
 				logging.info(f"Submission text could not be found in generated text of job {post_job.id}")
-				continue
+				return
 
 			if post_job.generated_image_path:
 				# If an image has been generated for this job
@@ -316,28 +320,38 @@ class RedditIO(threading.Thread, LogicMixin):
 				submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit_image(**post_parameters, nsfw=self._set_nsfw_flair_on_submissions)
 
 			else:
-				try:
-					# Sometimes url links posted are banned by reddit.
-					# It will raise a DOMAIN_BANNED exception
-					submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters, nsfw=self._set_nsfw_flair_on_submissions)
-				except praw.exceptions.RedditAPIException as e:
-					if 'DOMAIN_BANNED' in str(e):
-						# 'Reset' the generated image and try again
-						post_job.generated_image_path = None
-						post_job.reddit_post_attempts = 0
-						post_job.save()
-					else:
-						raise e
+				# Sometimes url links posted are banned by reddit.
+				# It will raise a DOMAIN_BANNED exception
+				submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters, nsfw=self._set_nsfw_flair_on_submissions)
 
 			if not submission_praw_thing:
 				# no submission has been made
 				logging.info(f"Failed to make a submission for job {post_job.id}")
-				continue
+				return
 
 			post_job.posted_name = submission_praw_thing.name
 			post_job.save()
 
 			logging.info(f"Job {post_job.id} submission submitted successfully")
+
+		except praw.exceptions.RedditAPIException as e:
+			if 'DOMAIN_BANNED' in str(e):
+				bypass_finally = True
+				# 'Reset' the generated image and try again
+				post_job.generated_image_path = None
+				post_job.reddit_post_attempts = 0
+				post_job.save()
+
+		except Exception as e:
+			raise e
+
+		finally:
+			if not bypass_finally:
+				# Increment the post attempts counter.
+				# This is to prevent posting too many times if there are errors
+				post_job.reddit_post_attempts += 1
+				post_job.save()
+
 
 	def synchronize_bots_comments_submissions(self):
 		# at first run, pick up Bot's own recent submissions and comments
@@ -380,28 +394,15 @@ class RedditIO(threading.Thread, LogicMixin):
 		# Attempt to schedule a new submission
 		# Check that one has not been completed or in the process of, before submitting
 
-		# First, find all new submissions for this subreddit that fall within the new submission timeframe
-		all_recent_new_submissions = (db_Thing.select(db_Thing).where(fn.Lower(db_Thing.subreddit) == subreddit.lower()).
+		recent_submissions = (db_Thing.select(db_Thing).where(fn.Lower(db_Thing.subreddit) == subreddit.lower()).
 					where(db_Thing.source_name == 't3_new_submission').
 					where(db_Thing.bot_username == self._bot_username).
+					where(db_Thing.status <= 8).
 					where(db_Thing.created_utc > (datetime.utcnow() - timedelta(hours=hourly_frequency))))
 
-		# Extend the first query to filter successful submissions
-		recent_successful_submissions = list(all_recent_new_submissions.
-			where(db_Thing.posted_name.is_null(False)).
-			where(db_Thing.bot_username == self._bot_username))
-
-		if recent_successful_submissions:
+		if recent_submissions:
+			# If there was any submission that is either pending or submitted in the timeframe
 			logging.info(f"A submission was made within the last {hourly_frequency} hours on {subreddit}")
-			return
-
-		# Extend the first query to find ones that are still being processed and not yet submitted
-		# TODO fix this to differentiate between text and image submissions
-		recent_pending_submissions = list(all_recent_new_submissions.where(db_Thing.posted_name.is_null()).
-			where((db_Thing.text_generation_attempts < 3) & (db_Thing.reddit_post_attempts < 1)))
-
-		if recent_pending_submissions:
-			logging.info(f"A submission for {subreddit} is still being processed in the queue")
 			return
 
 		logging.info(f"Scheduling a new submission on {subreddit}")
@@ -432,9 +433,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		return list(db_Thing.select(db_Thing).
 					where(db_Thing.source_name != 't3_new_submission').
 					where(db_Thing.bot_username == self._bot_username).
-					where(db_Thing.reddit_post_attempts < 1).
-					where(db_Thing.generated_text.is_null(False)).
-					where(db_Thing.posted_name.is_null()))
+					where(db_Thing.status == 7))
 
 	def pending_new_submission_jobs(self):
 		# A list of pending Submission Things from the database that have had text generated,
@@ -444,20 +443,8 @@ class RedditIO(threading.Thread, LogicMixin):
 		query = (db_Thing.select(db_Thing).
 					where(db_Thing.source_name == 't3_new_submission').
 					where(db_Thing.bot_username == self._bot_username).
-					where(db_Thing.reddit_post_attempts < 1).
-					where(db_Thing.generated_text.is_null(False)).
-					where(db_Thing.posted_name.is_null()))
-
-		# Extra where query to include selftext and image queries
-		# query.where((db_Thing.image_generation_parameters.is_null()) | (db_Thing.generated_image_path.is_null(False)))
-
-		text_jobs = query.where(db_Thing.image_generation_parameters.is_null(True))
-		image_jobs = query.where(db_Thing.generated_image_path.is_null(False))
-		print('text jobs', list(text_jobs))
-		print('image jobs', list(image_jobs))
-
-		return list(set(text_jobs + image_jobs))
-		# return image_jobs
+					where(db_Thing.status == 7))
+		return list(query)
 
 	def _find_depth_of_comment(self, praw_comment):
 		"""

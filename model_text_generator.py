@@ -36,21 +36,12 @@ class ModelTextGenerator(threading.Thread):
 
 		while True:
 
-			try:
-				# get the top job in the list
-				jobs = self.top_pending_jobs()
-				if not jobs:
-					# there are no jobs at all in the queue
-					# Rest a little before attempting again
-					time.sleep(30)
-					continue
+			jobs = self.top_pending_jobs()
 
-				for job in jobs:
+			for job in jobs:
+
+				try:
 					logging.info(f"Starting to generate text for job_id {job.id}.")
-
-					# Increment the counter because we're about to generate text
-					job.text_generation_attempts += 1
-					job.save()
 
 					# use the model to generate the text
 					# pass a copy of the parameters to keep the job values intact
@@ -69,8 +60,19 @@ class ModelTextGenerator(threading.Thread):
 						job.generated_text = generated_text
 						job.save()
 
-			except:
-				logging.exception("Generating text for a job failed")
+				except:
+					logging.exception(f"Generating text for a {job} failed")
+
+				finally:
+					# Increment the counter because we're about to generate text
+					job.text_generation_attempts += 1
+					job.save()
+
+			if not jobs:
+				# there are no jobs at all in the queue
+				# Rest a little before attempting again
+				time.sleep(30)
+				continue
 
 	def top_pending_jobs(self):
 		"""
@@ -81,9 +83,7 @@ class ModelTextGenerator(threading.Thread):
 		"""
 
 		query = db_Thing.select(db_Thing).\
-					where(db_Thing.text_generation_parameters.is_null(False)).\
-					where(db_Thing.generated_text.is_null()).\
-					where(db_Thing.text_generation_attempts < 3).\
+					where(db_Thing.status == 3).\
 					order_by(db_Thing.created_utc)
 		return list(query)
 
