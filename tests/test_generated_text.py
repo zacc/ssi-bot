@@ -1,10 +1,10 @@
 import pytest
 
-
+from generators.text import ModelTextGenerator
 from logic_mixin import LogicMixin
 
 
-class TestTitleParsing():
+class TestGeneratedTextParsing():
 
 	@pytest.mark.parametrize("test_input, expected",
 		[('<|sols|><|sot|>The title text<|eot|><|sol|>', "The title text"),
@@ -50,3 +50,27 @@ class TestTitleParsing():
 		logic = LogicMixin()
 		returned_dict = logic.extract_submission_from_generated_text(test_input)
 		assert returned_dict == expected
+
+
+class TestGeneratedTextValidation():
+
+	@pytest.mark.parametrize("source_name, prompt, text, expected",
+		[('t3_new_submission', '<|soss|><|sot|>', '<|soss|><|sot|>Just a normal title<|eot|><|sost|>Something completely outrageous!<|eost|><|sor|>Blah blah blah<|', True),
+		('t3_new_submission', '<|sols|><|sot|>', '<|sols|><|sot|>Just a normal title<|eot|><|sol|><|eol|><|sor|>Blah blah blah<|', True),
+		('t3_new_submission', '<|sols|><|sot|>', '<|sols|><|sot|>Title<|eot|><|sost|>Link submission but with a selftext tag<|eost|><|sor|>Blah blah blah<|', True),
+		('t3_new_submission', '<|soss|><|sot|>', '<|soss|><|sot|>', False),
+		('t3_new_submission', '<|sols|><|sot|>', '<|sols|><|sot|>Title is too long too long too long too long too long too long too long too long too long too long too long too long too long too long too long too long too long too longtoo long too long too long too long too long too long too long too long too long too long too longtoo long too long too long too long<|eot|><|sol|><|eol|><|sor|>Blah blah blah<|', False)])
+	def test_new_submission_validation(self, source_name, prompt, text, expected):
+
+		mtg = ModelTextGenerator()
+		returned_value = mtg.validate_generated_text(source_name, prompt, text)
+		assert returned_value == expected
+
+	@pytest.mark.parametrize("source_name, prompt, text, expected",
+		[('t1_aaaaaa', '<|sor|>', '<|sor|>Well completed text<|eor|>', True),
+		('t1_aaaaaa', '<|sor|>', '<|sor|>incompleted sample', False)])
+	def test_reply_validation(self, source_name, prompt, text, expected):
+
+		mtg = ModelTextGenerator()
+		returned_value = mtg.validate_generated_text(source_name, prompt, text)
+		assert returned_value == expected

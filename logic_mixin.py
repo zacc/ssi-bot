@@ -1,14 +1,7 @@
 #!/usr/bin/env python3
-import json
 import logging
 import random
 import re
-import requests
-import urllib.parse
-
-from datetime import datetime
-
-from bs4 import BeautifulSoup
 
 from praw.models import (Submission as praw_Submission, Comment as praw_Comment, Message as praw_Message)
 
@@ -16,7 +9,6 @@ from praw.models import (Submission as praw_Submission, Comment as praw_Comment,
 class LogicMixin():
 	"""
 	This mixin contains all the logic for tagging comments,
-	and replying to posts.
 	It is abstracted so that users can update this code on their fork,
 	while taking updates on the main classes.
 	"""
@@ -134,6 +126,7 @@ class LogicMixin():
 			return prefix[-1450:]
 
 		return prefix
+
 
 	def calculate_reply_probability(self, praw_thing):
 		# Ths function contains all of the logic used for deciding whether to reply
@@ -265,6 +258,7 @@ class LogicMixin():
 			# but we'll still try and truncate the string at the last line break (end of paragraph)
 			# so that the text still looks clean.
 			index_of_truncate = generated_text.rfind("\\n")
+
 		if index_of_truncate == -1:
 			# in case trained model do not output tags and put lot !!!!! at the end,
 			# This change allows this messages without need of end tags
@@ -293,7 +287,11 @@ class LogicMixin():
 			# There must be at least a complete title to make a submission
 			return None
 
-		return generated_text[idx_title_start + len(self._title_start_tag):idx_title_end]
+		title_text = generated_text[idx_title_start + len(self._title_start_tag):idx_title_end]
+
+		if (0 < len(title_text) < 300):
+			# Validate the title length is within reddit's range
+			return title_text
 
 	def extract_selftext_from_generated_text(self, generated_text):
 
@@ -303,11 +301,8 @@ class LogicMixin():
 		if idx_st_start == -1 or idx_st_end == -1:
 			return None
 
-		title_text = generated_text[idx_st_start + len(self._selftext_start_tag):idx_st_end]
-
-		if (0 < len(title_text) < 300):
-			# Validate the title length is within reddit's range
-			return title_text
+		selftext_text = generated_text[idx_st_start + len(self._selftext_start_tag):idx_st_end]
+		return selftext_text
 
 	def extract_submission_from_generated_text(self, generated_text):
 
@@ -330,9 +325,3 @@ class LogicMixin():
 			return_dict['selftext'] = selftext
 
 		return return_dict
-
-	def validate_new_submission_text(self):
-		pass
-
-	def validate_reply_text(self):
-		pass

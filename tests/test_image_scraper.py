@@ -1,5 +1,5 @@
 
-from daemon.scraper_text_to_image import ImageScraper
+from generators.scraper import ImageScraper
 
 
 class TestImageDownload():

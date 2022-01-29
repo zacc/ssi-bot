@@ -9,6 +9,7 @@ from configparser import ConfigParser
 
 from simpletransformers.language_generation import LanguageGenerationModel
 
+from logic_mixin import LogicMixin
 from db import Thing as db_Thing
 
 from keyword_helper import KeywordHelper
@@ -16,7 +17,7 @@ from keyword_helper import KeywordHelper
 ROOT_DIR = Path(__file__).parent.parent.parent
 
 
-class ModelTextGenerator(threading.Thread):
+class ModelTextGenerator(threading.Thread, LogicMixin):
 
 	daemon = True
 	name = "MTGThread"
@@ -56,6 +57,13 @@ class ModelTextGenerator(threading.Thread):
 							logging.info(f"Negative keywords {negative_keyword_matches} found in generated text, this text will be rejected.")
 							continue
 
+						# Perform a very basic validation of the generated text
+						prompt = job.text_generation_parameters.get('prompt', '')
+						valid = self.validate_generated_text(job.source_name, prompt, generated_text)
+						if not valid:
+							logging.info(f"Generated text for {job} failed validation, this text will be rejected.")
+							continue
+
 						# if the model generated text, set it into the 'job'
 						job.generated_text = generated_text
 						job.save()
@@ -74,25 +82,9 @@ class ModelTextGenerator(threading.Thread):
 				time.sleep(30)
 				continue
 
-	def top_pending_jobs(self):
-		"""
-		Get a list of jobs that need text to be generated, by treating
-		each database Thing record as a 'job'.
-		Three attempts at text generation are allowed.
-
-		"""
-
-		query = db_Thing.select(db_Thing).\
-					where(db_Thing.status == 3).\
-					order_by(db_Thing.created_utc)
-		return list(query)
-
 	def generate_text(self, bot_username, text_generation_parameters):
 
 		model_path = ROOT_DIR / self._config[bot_username]['model_path']
-
-		if not model_path:
-			logging.error(f'Cannot generate GPT-2 text: Bot {bot_username} model path config could not be found.')
 
 		# if you are generating on CPU, keep use_cuda and fp16 both false.
 		# If you have a nvidia GPU you may enable these features
@@ -113,3 +105,30 @@ class ModelTextGenerator(threading.Thread):
 
 		if output_list:
 			return output_list[0]
+
+	def top_pending_jobs(self):
+		"""
+		Get a list of jobs that need text to be generated, by treating
+		each database Thing record as a 'job'.
+		Three attempts at text generation are allowed.
+
+		"""
+
+		query = db_Thing.select(db_Thing).\
+					where(db_Thing.status == 3).\
+					order_by(db_Thing.created_utc)
+		return list(query)
+
+	def validate_generated_text(self, source_name, prompt, generated_text):
+
+		if source_name == 't3_new_submission':
+			# The job is to create a new submission so
+			# Check it has a title
+			return self.extract_title_from_generated_text(generated_text) is not None
+
+		else:
+			# The job is to create a reply
+			# Check that is has a closing tag
+			new_text = generated_text[len(prompt):]
+			print('new', new_text)
+			return self._end_tag in new_text
