@@ -296,8 +296,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			generated_text = post_job.generated_text
 
-			post_parameters = self.extract_submission_from_generated_text(\
-				post_job.text_generation_parameters['prompt'], generated_text)
+			post_parameters = self.extract_submission_from_generated_text(generated_text)
 
 			if not post_parameters:
 				logging.info(f"Submission text could not be found in generated text of job {post_job.id}")
