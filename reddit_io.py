@@ -14,6 +14,8 @@ from praw.models import (Submission as praw_Submission, Comment as praw_Comment,
 
 from logic_mixin import LogicMixin
 
+from generators.text import default_text_generation_parameters
+
 from db import Thing as db_Thing
 from peewee import fn
 from keyword_helper import KeywordHelper
@@ -28,21 +30,10 @@ class RedditIO(threading.Thread, LogicMixin):
 
 	_praw = None
 
-	_default_text_generation_parameters = {
-			'max_length': 260,
-			'num_return_sequences': 1,
-			'prompt': None,
-			'temperature': 0.8,
-			'top_k': 40,
-	}
-
-	_default_image_generation_parameters = {
-		'type': 'scraper',
-		'prompt': None,
-	}
-
 	_subreddit_flair_id_map = {}
 	_new_submission_schedule = []
+
+	_default_text_generation_parameters = default_text_generation_parameters
 
 	def __init__(self, bot_username):
 		threading.Thread.__init__(self)
@@ -86,8 +77,13 @@ class RedditIO(threading.Thread, LogicMixin):
 		self._submission_image_generator = self._config[self._bot_username].get('submission_image_generator', 'scraper')
 
 		if self._submission_image_generator == 'scraper':
-			# TODO import the parameters from scraper
-			pass
+			from generators.scraper import default_image_generation_parameters
+			self._default_image_generation_parameters = default_image_generation_parameters
+		elif self._submission_image_generator == 'text2image':
+			from generators.text2image import default_image_generation_parameters
+			self._default_image_generation_parameters = default_image_generation_parameters
+
+		print(self._default_image_generation_parameters)
 
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini

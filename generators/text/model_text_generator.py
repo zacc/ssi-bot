@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 import logging
-import os
 import threading
 import time
 
+from pathlib import Path
 from configparser import ConfigParser
 
 from simpletransformers.language_generation import LanguageGenerationModel
@@ -13,7 +13,7 @@ from db import Thing as db_Thing
 
 from keyword_helper import KeywordHelper
 
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = Path(__file__).parent.parent.parent
 
 
 class ModelTextGenerator(threading.Thread):
@@ -89,7 +89,7 @@ class ModelTextGenerator(threading.Thread):
 
 	def generate_text(self, bot_username, text_generation_parameters):
 
-		model_path = os.path.join(ROOT_DIR, self._config[bot_username]['model_path'])
+		model_path = ROOT_DIR / self._config[bot_username]['model_path']
 
 		if not model_path:
 			logging.error(f'Cannot generate GPT-2 text: Bot {bot_username} model path config could not be found.')
@@ -102,7 +102,7 @@ class ModelTextGenerator(threading.Thread):
 		start_time = time.time()
 
 		# pop the prompt out from the args
-		prompt = text_generation_parameters.pop('prompt')
+		prompt = text_generation_parameters.pop('prompt', '')
 
 		output_list = model.generate(prompt=prompt, args=text_generation_parameters)
 

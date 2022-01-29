@@ -2,8 +2,8 @@ import logging
 import time
 from configparser import ConfigParser
 
-from model_text_generator import ModelTextGenerator
-from daemon.scraper_text_to_image import ImageScraper
+from generators.text import ModelTextGenerator
+from generators.scraper import ImageScraper
 from reddit_io import RedditIO
 
 from db import create_db_tables
@@ -36,7 +36,7 @@ def main():
 	mtg = ModelTextGenerator()
 	mtg.start()
 
-	# Start the image scraper
+	# Start the image scraper daemon
 	imgscr = ImageScraper()
 	imgscr.start()
 

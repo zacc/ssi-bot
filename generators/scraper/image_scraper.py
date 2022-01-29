@@ -2,7 +2,6 @@
 
 import json
 import logging
-import os
 import requests
 import threading
 import time
@@ -61,9 +60,9 @@ class ImageScraper(threading.Thread, LogicMixin):
 					print(f'job status is {job.status}')
 
 			# Sleep a bit more to be nice to dem servers
-			# time.sleep(120)
+			time.sleep(120)
 			# Testing
-			time.sleep(10)
+			# time.sleep(10)
 
 	def _download_image_for_search_string(self, search_string, image_generation_parameters, attempt):
 
