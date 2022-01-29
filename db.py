@@ -71,7 +71,7 @@ def on_presave_handler(model_class, instance, created):
 
 	before_status = instance.status
 
-	if (instance.text_generation_attempts >= text_gen_attempts_allowed and instance.generate_text is None) or \
+	if (instance.text_generation_attempts >= text_gen_attempts_allowed and instance.generated_text is None) or \
 		(instance.image_generation_attempts >= image_gen_attempts_allowed and instance.generated_image_path is None) or \
 		(instance.reddit_post_attempts >= reddit_submit_attempts_allowed and instance.posted_name is None):
 		# Attempts have been attempted and no content was created so fail the job
