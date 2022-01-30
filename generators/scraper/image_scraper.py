@@ -7,8 +7,11 @@ import threading
 import time
 import urllib.parse
 
+from collections import OrderedDict
+
 from bs4 import BeautifulSoup
-from nltk import tokenize
+from nltk.tokenize import sent_tokenize
+from nltk import pos_tag, TweetTokenizer
 
 from logic_mixin import LogicMixin
 
@@ -71,11 +74,25 @@ class ImageScraper(threading.Thread, LogicMixin):
 		# pop the prompt out from the args
 		prompt = image_generation_parameters.pop('prompt', None)
 
-		# split the search string into sentences
-		sentences = tokenize.sent_tokenize(search_string)
+		search_keywords = prompt.split(' ') if prompt else []
+
+		first_sentence = sent_tokenize(search_string)[0]
+
+		# remove numbers and tokenize the text
+		tokenized = TweetTokenizer().tokenize(text.translate({ord(ch): None for ch in '0123456789'}))
+		# remove single letter tokens
+		tokenized = [i for i in tokenized if len(i) > 1]
+		# remove duplicates from the token list
+		tokenized = list(OrderedDict.fromkeys(tokenized))
+
+		# put nltk tags on it
+		pos_tagged_text = nltk.pos_tag(tokenized)
+
+		# Extract all nouns, verbs and adverbs
+		search_keywords.append([i[0] for i in pos_tagged_text if i[1][:2] in ['NN', 'VB', 'RB']])
 
 		# Truncate to improve effectiveness of the search
-		search_terms = ' '.join(sentences[0].split()[:8])
+		search_keywords = search_keywords[:10]
 
 		# If it exists, add the prefix to improve results
 		if prompt:
@@ -85,6 +102,7 @@ class ImageScraper(threading.Thread, LogicMixin):
 		# If on the 2nd attempt, jump ahead
 		search_parameters = {'q': search_terms,
 							'form': 'HDRSC2',
+							# 'qft': '+filterui:photo-photo',
 							# 'qft': '+filterui:imagesize-large',
 							'safeSearch': 'strict',
 							'first': int(1 + (attempt * 10))}
