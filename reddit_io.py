@@ -292,7 +292,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 					try:
 						# Post the submission to reddit
-						submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters)
+						submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters, nsfw=self._set_nsfw_flair_on_posts)
 						break
 
 					except praw.exceptions.RedditAPIException as e:
