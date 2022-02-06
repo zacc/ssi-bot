@@ -12,7 +12,7 @@ from simpletransformers.language_generation import LanguageGenerationModel
 from logic_mixin import LogicMixin
 from db import Thing as db_Thing
 
-from keyword_helper import KeywordHelper
+from utils.keyword_helper import KeywordHelper
 
 ROOT_DIR = Path(__file__).parent.parent.parent
 

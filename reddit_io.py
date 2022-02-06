@@ -18,7 +18,7 @@ from generators.text import default_text_generation_parameters
 
 from db import Thing as db_Thing
 from peewee import fn
-from keyword_helper import KeywordHelper
+from utils.keyword_helper import KeywordHelper
 
 
 class RedditIO(threading.Thread, LogicMixin):
