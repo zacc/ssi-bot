@@ -2,6 +2,7 @@
 
 import json
 import logging
+import nltk
 import requests
 import threading
 import time
@@ -71,15 +72,16 @@ class ImageScraper(threading.Thread, LogicMixin):
 
 		logging.info(f"Searching on Bing for an image for: \"{search_string}\"")
 
-		# pop the prompt out from the args
+		# pop the prompt out from the args (default value is that of the image_search_prefix)
 		prompt = image_generation_parameters.pop('prompt', None)
 
+		# Split the prompt into keywords, or just an empty array
 		search_keywords = prompt.split(' ') if prompt else []
 
 		first_sentence = sent_tokenize(search_string)[0]
 
 		# remove numbers and tokenize the text
-		tokenized = TweetTokenizer().tokenize(text.translate({ord(ch): None for ch in '0123456789'}))
+		tokenized = TweetTokenizer().tokenize(first_sentence.translate({ord(ch): None for ch in '0123456789'}))
 		# remove single letter tokens
 		tokenized = [i for i in tokenized if len(i) > 1]
 		# remove duplicates from the token list
@@ -88,19 +90,15 @@ class ImageScraper(threading.Thread, LogicMixin):
 		# put nltk tags on it
 		pos_tagged_text = nltk.pos_tag(tokenized)
 
-		# Extract all nouns, verbs and adverbs
+		# Extract all nouns, verbs and adverbs and append to the existing
 		search_keywords.append([i[0] for i in pos_tagged_text if i[1][:2] in ['NN', 'VB', 'RB']])
 
-		# Truncate to improve effectiveness of the search
+		# Truncate to 10 keywords to improve effectiveness of the search
 		search_keywords = search_keywords[:10]
-
-		# If it exists, add the prefix to improve results
-		if prompt:
-			search_terms = prompt + ' ' + search_terms
 
 		# Collect and encode all search url parameters
 		# If on the 2nd attempt, jump ahead
-		search_parameters = {'q': search_terms,
+		search_parameters = {'q': search_keywords,
 							'form': 'HDRSC2',
 							# 'qft': '+filterui:photo-photo',
 							# 'qft': '+filterui:imagesize-large',
