@@ -14,12 +14,12 @@ from bs4 import BeautifulSoup
 from nltk.tokenize import sent_tokenize
 from nltk import pos_tag, TweetTokenizer
 
-from logic_mixin import LogicMixin
+from reddit_io.tagging_mixin import TaggingMixin
 
 from db import Thing as db_Thing
 
 
-class ImageScraper(threading.Thread, LogicMixin):
+class ImageScraper(threading.Thread, TaggingMixin):
 
 	daemon = True
 	name = "ImageScraper"

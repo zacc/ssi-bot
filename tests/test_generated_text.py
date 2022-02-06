@@ -1,7 +1,7 @@
 import pytest
 
 from generators.text import ModelTextGenerator
-from logic_mixin import LogicMixin
+from reddit_io.tagging_mixin import TaggingMixin
 
 
 class TestGeneratedTextParsing():
@@ -15,7 +15,7 @@ class TestGeneratedTextParsing():
 		('<|soss|><|sost|>The selftext<|', None)])
 	def test_title_parsing(self, test_input, expected):
 
-		logic = LogicMixin()
+		logic = TaggingMixin()
 		returned_text = logic.extract_title_from_generated_text(test_input)
 		assert returned_text == expected
 
@@ -27,7 +27,7 @@ class TestGeneratedTextParsing():
 		('<|soss|><|sot|>The title<|', None)])
 	def test_selftext_parsing(self, test_input, expected):
 
-		logic = LogicMixin()
+		logic = TaggingMixin()
 		returned_text = logic.extract_selftext_from_generated_text(test_input)
 		assert returned_text == expected
 
@@ -38,7 +38,7 @@ class TestGeneratedTextParsing():
 		('<|soss|><|sot|>The title only<|', '<|soss|><|sot|>The title only<|', {})])
 	def test_reply_parsing(self, prompt, generated_text, expected):
 
-		logic = LogicMixin()
+		logic = TaggingMixin()
 		returned_text = logic.extract_reply_from_generated_text(prompt, generated_text)
 		assert returned_text == expected
 
@@ -47,7 +47,7 @@ class TestGeneratedTextParsing():
 		('<|soss|><|sot|>The title text<|eot|><|sol|><|eol|>', {'title': "The title text"})])
 	def test_all_text_parsing(self, test_input, expected):
 
-		logic = LogicMixin()
+		logic = TaggingMixin()
 		returned_dict = logic.extract_submission_from_generated_text(test_input)
 		assert returned_dict == expected
 

@@ -11,17 +11,18 @@ from datetime import datetime, timedelta
 
 import praw
 from praw.models import (Submission as praw_Submission, Comment as praw_Comment, Message as praw_Message)
+from peewee import fn
 
-from logic_mixin import LogicMixin
+from .logic_mixin import LogicMixin
+from .tagging_mixin import TaggingMixin
 
 from generators.text import default_text_generation_parameters
 
-from db import Thing as db_Thing
-from peewee import fn
+from bot_db.db import Thing as db_Thing
 from utils.keyword_helper import KeywordHelper
 
 
-class RedditIO(threading.Thread, LogicMixin):
+class RedditIO(threading.Thread, LogicMixin, TaggingMixin):
 	"""
 	Advised that praw can have problems with threads,
 	so decided to keep all praw tasks in one daemon

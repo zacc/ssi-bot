@@ -9,7 +9,7 @@ from configparser import ConfigParser
 
 from simpletransformers.language_generation import LanguageGenerationModel
 
-from logic_mixin import LogicMixin
+from reddit_io.tagging_mixin import TaggingMixin
 from db import Thing as db_Thing
 
 from utils.keyword_helper import KeywordHelper
@@ -17,7 +17,7 @@ from utils.keyword_helper import KeywordHelper
 ROOT_DIR = Path(__file__).parent.parent.parent
 
 
-class ModelTextGenerator(threading.Thread, LogicMixin):
+class ModelTextGenerator(threading.Thread, TaggingMixin):
 
 	daemon = True
 	name = "MTGThread"
