@@ -6,7 +6,7 @@ from generators.text import ModelTextGenerator
 from generators.scraper import ImageScraper
 from reddit_io import RedditIO
 
-from db import create_db_tables
+from bot_db.db import create_db_tables
 
 
 def main():

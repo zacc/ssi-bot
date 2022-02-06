@@ -16,7 +16,7 @@ from nltk import pos_tag, TweetTokenizer
 
 from reddit_io.tagging_mixin import TaggingMixin
 
-from db import Thing as db_Thing
+from bot_db.db import Thing as db_Thing
 
 
 class ImageScraper(threading.Thread, TaggingMixin):

@@ -10,7 +10,7 @@ from configparser import ConfigParser
 from simpletransformers.language_generation import LanguageGenerationModel
 
 from reddit_io.tagging_mixin import TaggingMixin
-from db import Thing as db_Thing
+from bot_db.db import Thing as db_Thing
 
 from utils.keyword_helper import KeywordHelper
 

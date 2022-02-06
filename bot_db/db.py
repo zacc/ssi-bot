@@ -5,7 +5,7 @@ from playhouse.signals import Model, pre_save
 from playhouse.sqlite_ext import JSONField
 from playhouse.sqliteq import SqliteQueueDatabase
 
-db = SqliteQueueDatabase('bot-db.sqlite3', pragmas={'journal_mode': 'wal', 'foreign_keys': 1})
+db = SqliteQueueDatabase('bot_db/bot-db.sqlite3', pragmas={'journal_mode': 'wal', 'foreign_keys': 1})
 
 
 class Thing(Model):
