@@ -86,6 +86,10 @@ class RedditIO(threading.Thread, LogicMixin, TaggingMixin):
 
 		print(self._default_image_generation_parameters)
 
+		# This is a hidden option to use a more detailed tagging system which gives the bot a stronger sense when replying.
+		# It is not backwards compatible between old models. The model has to be trained with this 'sense'
+		self._use_reply_sense = self._config[self._bot_username].getboolean('use_reply_sense', False)
+
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini
 		self._praw = praw.Reddit(self._bot_username)
@@ -197,7 +201,7 @@ class RedditIO(threading.Thread, LogicMixin, TaggingMixin):
 	def get_text_generation_parameters(self, praw_thing):
 
 		logging.info(f"Configuring a textgen job for {praw_thing.name}")
-		prompt = self._collate_tagged_comment_history(praw_thing) + self._get_reply_tag(praw_thing)
+		prompt = self._collate_tagged_comment_history(praw_thing, self._use_reply_sense) + self._get_reply_tag(praw_thing)
 
 		if prompt:
 			# If a prompt was returned, we can go ahead and create the text generation parameters dict

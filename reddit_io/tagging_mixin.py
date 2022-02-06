@@ -43,6 +43,76 @@ class TaggingMixin():
 			# Make a text post
 			return self._selftext_submission_start_tag + self._title_start_tag
 
+	def tag_submission(self, praw_thing, use_reply_sense=False):
+
+		tagged_text = ""
+
+		if praw_thing.is_self:
+			tagged_text += "<|soss"
+		else:
+			tagged_text += "<|sols"
+
+		if use_reply_sense:
+			tagged_text += f" r/{praw_thing.subreddit}|>"
+		else:
+			tagged_text += "|>"
+
+		# prepend the tagged text
+		if praw_thing.is_self:
+
+			selftext = praw_thing.selftext
+
+			if hasattr(praw_thing, 'poll_data'):
+				# The submission has a poll - extract that data
+				for option in praw_thing.poll_data.options:
+					# Replicate unordered list markdown,
+					# appeding it to the end of the selftext
+					selftext += f" - {option.text}"
+
+			# selftext submission
+			tagged_text += f"<|sot|>{praw_thing.title}<|eot|><|sost|>{selftext}<|eost|>"
+
+		else:
+			# it's a link submission
+			tagged_text += f"<|sot|>{praw_thing.title}<|eot|><|sol|><|eol|>"
+
+		return tagged_text
+
+	def tag_comment(self, praw_thing, use_reply_sense=False):
+		if use_reply_sense:
+
+			if praw_thing.submission.author == praw_thing.author:
+				return f'<|soopr u/{praw_thing.author}|>{praw_thing.body}<|eoopr|>'
+
+			parent_parent = None
+			try:
+				parent_parent = praw_thing.parent().parent()
+				if parent_parent.author.name == praw_thing.author:
+					return f'<|soocr u/{praw_thing.author}|>{praw_thing.body}<|eoocr|>'
+			except:
+				# Exception will be raised if there are not two parents
+				pass
+
+			return f'<|sor u/{praw_thing.author}|>{praw_thing.body}<|eor|>'
+
+		else:
+			return f'<|sor|>{praw_thing.body}<|eor|>'
+
+	def tag_message(self, praw_thing, use_reply_sense=False):
+
+		tagged_text = ""
+
+		if not praw_thing.parent_id:
+			# If parent_id property is None then it is the first message of the chain
+			tagged_text += f'<|sot>{praw_thing.subject}<|eot|>'
+
+		if use_reply_sense:
+			tagged_text += f'<|soocr|>{praw_thing.body}<|eoocr|>'
+		else:
+			tagged_text += f'<|sor|>{praw_thing.body}<|eor|>'
+
+		return tagged_text
+
 	def extract_reply_from_generated_text(self, prompt, generated_text):
 
 		# remove any cruft

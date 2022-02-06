@@ -15,7 +15,7 @@ class LogicMixin():
 	while taking updates on the main classes.
 	"""
 
-	def _collate_tagged_comment_history(self, praw_thing, to_level=6):
+	def _collate_tagged_comment_history(self, praw_thing, to_level=6, use_reply_sense=False):
 		"""
 		Loop backwards (upwards in reddit terms) from the praw_thing through the comment up x times,
 		tagging the content text in the same way as the training data is
@@ -34,44 +34,22 @@ class LogicMixin():
 		while loop_thing and counter < to_level:
 			if isinstance(loop_thing, praw_Submission):
 
-				# prepend the tagged text
-				if loop_thing.is_self:
-
-					selftext = loop_thing.selftext
-
-					if hasattr(loop_thing, 'poll_data'):
-						# The submission has a poll - extract that data
-						for option in loop_thing.poll_data.options:
-							# Replicate unordered list markdown
-							selftext += f" - {option.text}"
-
-					# selftext submission
-					tagged_text = f"<|soss|><|sot|>{loop_thing.title}<|eot|><|sost|>{selftext}<|eost|>"
-
-				else:
-					# it's a link submission
-					tagged_text = f"<|sols|><|sot|>{loop_thing.title}<|eot|><|sol|><|eol|>"
-
+				tagged_text = self.tag_submission(loop_thing, use_reply_sense)
 				prefix = tagged_text + prefix
 
 				# can't go any higher than a submission, so break the loop
 				break
 
 			elif isinstance(loop_thing, praw_Comment):
-				# just a normal <|sor|>
-				tagged_text = f'<|sor|>{loop_thing.body}<|eor|>'
-
+				# It's a comment
+				tagged_text = self.tag_comment(praw_thing, use_reply_sense)
 				prefix = tagged_text + prefix
+
 				loop_thing = loop_thing.parent()
 
 			elif isinstance(loop_thing, praw_Message):
 
-				if not loop_thing.parent_id:
-					# If parent_id property is None then it is the first message of the chain
-					tagged_text = f'<|sot>{loop_thing.subject}<|eot|><|sor|>{loop_thing.body}<|eor|>'
-				else:
-					tagged_text = f'<|sor|>{loop_thing.body}<|eor|>'
-
+				tagged_text = self.tag_message(loop_thing, use_reply_sense)
 				prefix = tagged_text + prefix
 
 				if loop_thing.parent_id:
