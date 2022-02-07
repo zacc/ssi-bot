@@ -418,7 +418,7 @@ class RedditIO(threading.Thread, LogicMixin, TaggingMixin):
 		text_generation_parameters['max_length'] = 1000
 		new_submission_thing['text_generation_parameters'] = text_generation_parameters
 
-		if new_submission_tag.startswith(self._link_submission_start_tag):
+		if new_submission_tag.startswith('<|sols'):
 			print('its a link submission')
 			image_generation_parameters = self._default_image_generation_parameters.copy()
 			image_generation_parameters['prompt'] = self._image_post_search_prefix
