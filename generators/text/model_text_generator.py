@@ -42,7 +42,7 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 			for job in jobs:
 
 				try:
-					logging.info(f"Starting to generate text for job_id {job.id}.")
+					logging.info(f"Starting to generate text for bot {job.bot_username}, job_id {job.id}.")
 
 					# use the model to generate the text
 					# pass a copy of the parameters to keep the job values intact
@@ -124,11 +124,15 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 		if source_name == 't3_new_submission':
 			# The job is to create a new submission so
 			# Check it has a title
-			return self.extract_title_from_generated_text(generated_text) is not None
+			title = self.extract_title_from_generated_text(generated_text)
+			if title is not None:
+				logging.info("Validation failed, no title")
+			return title is not None
 
 		else:
 			# The job is to create a reply
 			# Check that is has a closing tag
 			new_text = generated_text[len(prompt):]
-			print('new', new_text)
+			if not self._end_tag in new_text:
+				logging.info("Validation failed, no end tag")
 			return self._end_tag in new_text

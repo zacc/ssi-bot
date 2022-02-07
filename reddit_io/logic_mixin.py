@@ -7,15 +7,17 @@ from datetime import datetime
 
 from praw.models import (Submission as praw_Submission, Comment as praw_Comment, Message as praw_Message)
 
+from .tagging_mixin import TaggingMixin
 
-class LogicMixin():
+
+class LogicMixin(TaggingMixin):
 	"""
 	This mixin contains key functions that are paired with reddit_io.py
 	It is abstracted so that users can update this code on their fork,
 	while taking updates on the main classes.
 	"""
 
-	def _collate_tagged_comment_history(self, praw_thing, to_level=6, use_reply_sense=False):
+	def _collate_tagged_comment_history(self, loop_thing, to_level=6, use_reply_sense=False):
 		"""
 		Loop backwards (upwards in reddit terms) from the praw_thing through the comment up x times,
 		tagging the content text in the same way as the training data is
@@ -29,9 +31,9 @@ class LogicMixin():
 		"""
 		counter = 0
 		prefix = ''
-		loop_thing = praw_thing
 
 		while loop_thing and counter < to_level:
+
 			if isinstance(loop_thing, praw_Submission):
 
 				tagged_text = self.tag_submission(loop_thing, use_reply_sense)
@@ -42,7 +44,7 @@ class LogicMixin():
 
 			elif isinstance(loop_thing, praw_Comment):
 				# It's a comment
-				tagged_text = self.tag_comment(praw_thing, use_reply_sense)
+				tagged_text = self.tag_comment(loop_thing, use_reply_sense)
 				prefix = tagged_text + prefix
 
 				loop_thing = loop_thing.parent()
@@ -60,19 +62,21 @@ class LogicMixin():
 
 			counter += 1
 
-		if prefix:
-			# Compile a regex that will match the bot username,
-			# then remove all instances from the text.
-			# This will stop GPT-2 using the bot's name in generated text which looks wrong in a real context.
-			regex = re.compile(re.escape(f"u/{self._praw.user.me().name}"), re.IGNORECASE)
-			prefix = regex.sub('', prefix)
-
 		if len(prefix) > 1500:
 			# The model can handle 1024 tokens, but a token is not just one character.
 			# Just truncate the long string to be safe and hope for the best :)
 			return prefix[-1450:]
 
+		# print('returning prefix', prefix)
 		return prefix
+
+	def remove_username_mentions_from_string(self, string, username):
+		# Compile a regex that will match the bot username,
+		# then remove all instances from the text.
+		# This will stop GPT-2 using the bot's name in generated text which looks wrong in a real context.
+		regex = re.compile(fr"u\/{username}(?!\|\>)", re.IGNORECASE)
+		string = regex.sub('', string)
+		return string
 
 	def calculate_reply_probability(self, praw_thing):
 		# Ths function contains all of the logic used for deciding whether to reply

@@ -32,16 +32,25 @@ class TaggingMixin():
 		# It's just a straight reply
 		return self._reply_start_tag
 
-	def _get_random_new_submission_tag(self):
+	def _get_random_new_submission_tag(self, subreddit, use_reply_sense):
 		# random is already seeded in reddit_io init
 		random_value = random.random()
 
+		tag = ''
+
 		if random_value < self._image_post_frequency:
 			# Make a link (image) post
-			return self._link_submission_start_tag + self._title_start_tag
+			tag += '<|sols'
 		else:
 			# Make a text post
-			return self._selftext_submission_start_tag + self._title_start_tag
+			tag += '<|soss'
+
+		if use_reply_sense:
+			tag += f' r/{subreddit}|>'
+		else:
+			tag += '|>'
+
+		return tag + self._title_start_tag
 
 	def tag_submission(self, praw_thing, use_reply_sense=False):
 

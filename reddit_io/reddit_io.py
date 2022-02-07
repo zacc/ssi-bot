@@ -14,7 +14,6 @@ from praw.models import (Submission as praw_Submission, Comment as praw_Comment,
 from peewee import fn
 
 from .logic_mixin import LogicMixin
-from .tagging_mixin import TaggingMixin
 
 from generators.text import default_text_generation_parameters
 
@@ -22,7 +21,7 @@ from bot_db.db import Thing as db_Thing
 from utils.keyword_helper import KeywordHelper
 
 
-class RedditIO(threading.Thread, LogicMixin, TaggingMixin):
+class RedditIO(threading.Thread, LogicMixin):
 	"""
 	Advised that praw can have problems with threads,
 	so decided to keep all praw tasks in one daemon
@@ -38,11 +37,9 @@ class RedditIO(threading.Thread, LogicMixin, TaggingMixin):
 
 	def __init__(self, bot_username):
 		threading.Thread.__init__(self)
+		threading.Thread.name = bot_username
 
 		self._bot_username = bot_username
-
-		# daemon Thread for logging
-		self.name = f"{self._bot_username}_io"
 
 		# seed the random generator
 		random.seed()
@@ -64,7 +61,8 @@ class RedditIO(threading.Thread, LogicMixin, TaggingMixin):
 		new_submission_schedule_string = self._config[self._bot_username].get('new_submission_schedule', '')
 		if new_submission_schedule_string != '':
 			self._new_submission_schedule = [(y[0].lower().strip(), int(y[1])) for y in [x.split('=') for x in new_submission_schedule_string.split(',')]]
-			logging.info(f"New submission schedule: {self._new_submission_schedule}")
+			pretty_submission_schedule_list = [f"{x[0]}: {x[1]} hourly" for x in self._new_submission_schedule]
+			logging.info(f"New submission schedule: {', '.join(pretty_submission_schedule_list)}.")
 
 		self._image_post_frequency = self._config[self._bot_username].getfloat('image_post_frequency', 0)
 		logging.info(f"Image post frequency has been set to {(self._image_post_frequency * 100)}%.")
@@ -84,8 +82,6 @@ class RedditIO(threading.Thread, LogicMixin, TaggingMixin):
 			from generators.text2image import default_image_generation_parameters
 			self._default_image_generation_parameters = default_image_generation_parameters
 
-		print(self._default_image_generation_parameters)
-
 		# This is a hidden option to use a more detailed tagging system which gives the bot a stronger sense when replying.
 		# It is not backwards compatible between old models. The model has to be trained with this 'sense'
 		self._use_reply_sense = self._config[self._bot_username].getboolean('use_reply_sense', False)
@@ -101,12 +97,12 @@ class RedditIO(threading.Thread, LogicMixin, TaggingMixin):
 		while True:
 			logging.info(f"Beginning to process inbox stream")
 
-			try:
-				self.poll_inbox_stream()
-			except:
-				logging.exception("Exception occurred while processing the inbox streams")
+			# try:
+			# 	self.poll_inbox_stream()
+			# except:
+			# 	logging.exception("Exception occurred while processing the inbox streams")
 
-			logging.info(f"Beginning to process incoming reddit streams")
+			# logging.info(f"Beginning to process incoming reddit streams")
 
 			try:
 				self.poll_incoming_streams()
@@ -133,7 +129,7 @@ class RedditIO(threading.Thread, LogicMixin, TaggingMixin):
 				logging.info(f"Beginning to attempt to schedule a new submission")
 
 				for subreddit, frequency in self._new_submission_schedule:
-					self.schedule_new_submission(subreddit, frequency)
+					self.attempt_schedule_new_submission(subreddit, frequency)
 			except:
 				logging.exception("Exception occurred while scheduling a new submission")
 
@@ -201,7 +197,13 @@ class RedditIO(threading.Thread, LogicMixin, TaggingMixin):
 	def get_text_generation_parameters(self, praw_thing):
 
 		logging.info(f"Configuring a textgen job for {praw_thing.name}")
-		prompt = self._collate_tagged_comment_history(praw_thing, self._use_reply_sense) + self._get_reply_tag(praw_thing)
+		# Collate history of comments prior to prompt the GPT-2 model with.
+		comment_history = self._collate_tagged_comment_history(praw_thing, use_reply_sense=self._use_reply_sense)
+		# Remove any bot mentions from the text because of the bot's fragile sense of self
+		cleaned_history = self.remove_username_mentions_from_string(comment_history, self._bot_username)
+		reply_start_tag = self._get_reply_tag(praw_thing)
+
+		prompt = cleaned_history + reply_start_tag
 
 		if prompt:
 			# If a prompt was returned, we can go ahead and create the text generation parameters dict
@@ -319,6 +321,10 @@ class RedditIO(threading.Thread, LogicMixin, TaggingMixin):
 				submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit_image(**post_parameters, nsfw=self._set_nsfw_flair_on_submissions)
 
 			else:
+				if 'url' not in post_parameters and 'selftext' not in post_parameters:
+					# there must be at minimum a title and (url or selftext) params with a new submission
+					post_parameters['selftext'] = ''
+
 				# Sometimes url links posted are banned by reddit.
 				# It will raise a DOMAIN_BANNED exception
 				submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters, nsfw=self._set_nsfw_flair_on_submissions)
@@ -389,14 +395,24 @@ class RedditIO(threading.Thread, LogicMixin, TaggingMixin):
 
 		return db_Thing.create(**record_dict)
 
-	def schedule_new_submission(self, subreddit, hourly_frequency):
+	def attempt_schedule_new_submission(self, subreddit, hourly_frequency):
 		# Attempt to schedule a new submission
 		# Check that one has not been completed or in the process of, before submitting
 
-		recent_submissions = (db_Thing.select(db_Thing).where(fn.Lower(db_Thing.subreddit) == subreddit.lower()).
+		pending_submissions = list(db_Thing.select(db_Thing).where(fn.Lower(db_Thing.subreddit) == subreddit.lower()).
 					where(db_Thing.source_name == 't3_new_submission').
 					where(db_Thing.bot_username == self._bot_username).
-					where(db_Thing.status <= 8).
+					where(db_Thing.status <= 7).
+					where(db_Thing.created_utc > (datetime.utcnow() - timedelta(hours=hourly_frequency))))
+
+		if pending_submissions:
+			logging.info(f"A submission for {subreddit} is pending...")
+			return
+
+		recent_submissions = list(db_Thing.select(db_Thing).where(fn.Lower(db_Thing.subreddit) == subreddit.lower()).
+					where(db_Thing.source_name == 't3_new_submission').
+					where(db_Thing.bot_username == self._bot_username).
+					where(db_Thing.status == 8).
 					where(db_Thing.created_utc > (datetime.utcnow() - timedelta(hours=hourly_frequency))))
 
 		if recent_submissions:
@@ -413,7 +429,7 @@ class RedditIO(threading.Thread, LogicMixin, TaggingMixin):
 		new_submission_thing['subreddit'] = subreddit
 
 		text_generation_parameters = self._default_text_generation_parameters.copy()
-		new_submission_tag = self._get_random_new_submission_tag()
+		new_submission_tag = self._get_random_new_submission_tag(subreddit, use_reply_sense=self._use_reply_sense)
 		text_generation_parameters['prompt'] = new_submission_tag
 		text_generation_parameters['max_length'] = 1000
 		new_submission_thing['text_generation_parameters'] = text_generation_parameters
@@ -438,12 +454,10 @@ class RedditIO(threading.Thread, LogicMixin, TaggingMixin):
 		# A list of pending Submission Things from the database that have had text generated,
 		# but not a reddit post attempt
 
-		# Base criteria
-		query = (db_Thing.select(db_Thing).
+		return list(db_Thing.select(db_Thing).
 					where(db_Thing.source_name == 't3_new_submission').
 					where(db_Thing.bot_username == self._bot_username).
 					where(db_Thing.status == 7))
-		return list(query)
 
 	def _find_depth_of_comment(self, praw_comment):
 		"""
