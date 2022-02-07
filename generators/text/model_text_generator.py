@@ -125,7 +125,7 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 			# The job is to create a new submission so
 			# Check it has a title
 			title = self.extract_title_from_generated_text(generated_text)
-			if title is not None:
+			if title is None:
 				logging.info("Validation failed, no title")
 			return title is not None
 
