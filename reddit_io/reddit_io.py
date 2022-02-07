@@ -36,8 +36,8 @@ class RedditIO(threading.Thread, LogicMixin):
 	_default_text_generation_parameters = default_text_generation_parameters
 
 	def __init__(self, bot_username):
-		threading.Thread.__init__(self)
-		threading.Thread.name = bot_username
+
+		threading.Thread.__init__(self, name=bot_username)
 
 		self._bot_username = bot_username
 
