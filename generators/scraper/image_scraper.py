@@ -61,7 +61,6 @@ class ImageScraper(threading.Thread, TaggingMixin):
 				finally:
 					job.image_generation_attempts += 1
 					job.save()
-					print(f'job status is {job.status}')
 
 			# Sleep a bit more to be nice to dem servers
 			time.sleep(120)

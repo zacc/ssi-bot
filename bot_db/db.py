@@ -18,6 +18,8 @@ class Thing(Model):
 
 	# timestamp representation of when this record was entered into the database
 	created_utc = TimestampField(default=time.time, utc=True)
+
+	# The bot which submitted this thing. *NOT* the author
 	bot_username = TextField()
 
 	status = IntegerField(default=1)
@@ -65,6 +67,10 @@ def on_presave_handler(model_class, instance, created):
 	# 3 = TEXT_GEN
 	# 1 = NEW
 
+	if instance.status >= 8:
+		# Status might already be set to 8 when the thing has come from the sync
+		return
+
 	text_gen_attempts_allowed = 3
 	image_gen_attempts_allowed = 3
 	reddit_submit_attempts_allowed = 1
@@ -77,8 +83,9 @@ def on_presave_handler(model_class, instance, created):
 		# Attempts have been attempted and no content was created so fail the job
 		instance.status = 9
 
-	elif instance.posted_name is not None:
+	elif instance.posted_name is not None or instance.text_generation_parameters is None:
 		# If it has a posted_name then it's been posted to reddit and it's complete.
+		# Or if it doesn't have text_generation_parameters at all, set to 8
 		instance.status = 8
 
 	elif instance.text_generation_parameters and instance.generated_text is None:

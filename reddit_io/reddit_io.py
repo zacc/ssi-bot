@@ -95,31 +95,28 @@ class RedditIO(threading.Thread, LogicMixin):
 		# pick up incoming submissions, comments etc from reddit and submit jobs for them
 
 		while True:
-			logging.info(f"Beginning to process inbox stream")
 
 			try:
+				logging.info(f"Beginning to process inbox stream")
 				self.poll_inbox_stream()
 			except:
 				logging.exception("Exception occurred while processing the inbox streams")
 
-			logging.info(f"Beginning to process incoming reddit streams")
-
 			try:
+				logging.info(f"Beginning to process incoming reddit streams")
 				self.poll_incoming_streams()
 			except:
 				logging.exception("Exception occurred while processing the incoming streams")
 
-			logging.info(f"Beginning to process outgoing post jobs")
-
 			try:
+				logging.info(f"Beginning to process outgoing post jobs")
 				for post_job in self.pending_reply_jobs():
 					self.post_outgoing_reply_jobs(post_job)
 			except:
 				logging.exception("Exception occurred while processing the outgoing reply jobs")
 
-			logging.info(f"Beginning to process outgoing new submission jobs")
-
 			try:
+				logging.info(f"Beginning to process outgoing new submission jobs")
 				for post_job in self.pending_new_submission_jobs():
 					self.post_outgoing_new_submission_jobs(post_job)
 			except:
@@ -127,7 +124,6 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			try:
 				logging.info(f"Beginning to attempt to schedule a new submission")
-
 				for subreddit, frequency in self._new_submission_schedule:
 					self.attempt_schedule_new_submission(subreddit, frequency)
 			except:
@@ -160,7 +156,7 @@ class RedditIO(threading.Thread, LogicMixin):
 					text_generation_parameters = self.get_text_generation_parameters(praw_thing)
 
 				# insert it into the database
-				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters)
+				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters=text_generation_parameters)
 
 			# mark the inbox item read
 			praw_thing.mark_read()
@@ -192,7 +188,7 @@ class RedditIO(threading.Thread, LogicMixin):
 					text_generation_parameters = self.get_text_generation_parameters(praw_thing)
 
 				# insert it into the database
-				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters)
+				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters=text_generation_parameters)
 
 	def get_text_generation_parameters(self, praw_thing):
 
@@ -388,6 +384,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		record_dict = {}
 		record_dict['source_name'] = praw_thing.name
 		record_dict['bot_username'] = self._bot_username
+		record_dict['subreddit'] = praw_thing.subreddit
 
 		if text_generation_parameters:
 			# If we want to generate a text reply, then include these parameters in the record
@@ -400,7 +397,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		# Check that one has not been completed or in the process of, before submitting
 
 		pending_submissions = list(db_Thing.select(db_Thing).where(fn.Lower(db_Thing.subreddit) == subreddit.lower()).
-					where(db_Thing.source_name == 't3_new_submission').
+					where(db_Thing.source_name.startswith('t3_')).
 					where(db_Thing.bot_username == self._bot_username).
 					where(db_Thing.status <= 7).
 					where(db_Thing.created_utc > (datetime.utcnow() - timedelta(hours=hourly_frequency))))
@@ -410,7 +407,7 @@ class RedditIO(threading.Thread, LogicMixin):
 			return
 
 		recent_submissions = list(db_Thing.select(db_Thing).where(fn.Lower(db_Thing.subreddit) == subreddit.lower()).
-					where(db_Thing.source_name == 't3_new_submission').
+					where(db_Thing.source_name.startswith('t3_')).
 					where(db_Thing.bot_username == self._bot_username).
 					where(db_Thing.status == 8).
 					where(db_Thing.created_utc > (datetime.utcnow() - timedelta(hours=hourly_frequency))))
