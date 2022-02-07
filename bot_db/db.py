@@ -18,16 +18,17 @@ class Thing(Model):
 
 	# timestamp representation of when this record was entered into the database
 	created_utc = TimestampField(default=time.time, utc=True)
+	status = IntegerField(default=1)
 
 	# The bot which submitted this thing. *NOT* the author
 	bot_username = TextField()
-
-	status = IntegerField(default=1)
 
 	# the praw *name* of the original comment or submission,
 	# where t3_ prefix = submission, t1_ = comment, t4_ = message
 	source_name = TextField()
 
+	# Author of the post (Redditor's username)
+	author = TextField()
 	# the subreddit used by new_submission job type
 	subreddit = TextField(null=True)
 

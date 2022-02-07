@@ -36,8 +36,7 @@ class RedditIO(threading.Thread, LogicMixin):
 	_default_text_generation_parameters = default_text_generation_parameters
 
 	def __init__(self, bot_username):
-
-		threading.Thread.__init__(self, name=bot_username)
+		super().__init__(name=bot_username)
 
 		self._bot_username = bot_username
 
@@ -52,7 +51,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		subreddits_config_string = self._config[self._bot_username].get('subreddits', 'test')
 		self._subreddits = [x.strip() for x in subreddits_config_string.lower().split(',')]
 
-		logging.info(f"Bot will reply to comments on subreddits: {', '.join(self._subreddits)}.")
+		logging.info(f"{self.bot_username} will reply to comments on subreddits: {', '.join(self._subreddits)}.")
 
 		subreddit_flair_id_string = self._config[self._bot_username].get('subreddit_flair_id_map', '')
 		if subreddit_flair_id_string != '':
@@ -333,6 +332,9 @@ class RedditIO(threading.Thread, LogicMixin):
 			post_job.posted_name = submission_praw_thing.name
 			post_job.save()
 
+			# Put the praw thing into the database so it's registered as a submitted job
+			self.insert_praw_thing_into_database(submission_praw_thing)
+
 			logging.info(f"Job {post_job.id} submission submitted successfully")
 
 		except praw.exceptions.RedditAPIException as e:
@@ -371,6 +373,12 @@ class RedditIO(threading.Thread, LogicMixin):
 				# Add the record into the database, with no chance of reply
 				record = self.insert_praw_thing_into_database(praw_thing)
 
+			if isinstance(praw_thing, praw_Comment):
+				parent_record = self.is_praw_thing_in_database(praw_thing.parent())
+				if not parent_record:
+					# Insert the parent, too, to prevent another job being made.
+					parent_record = self.insert_praw_thing_into_database(praw_thing.parent())
+
 		logging.info("Completed syncing the bot's own submissions/comments")
 
 	def is_praw_thing_in_database(self, praw_thing):
@@ -381,9 +389,11 @@ class RedditIO(threading.Thread, LogicMixin):
 		return record
 
 	def insert_praw_thing_into_database(self, praw_thing, text_generation_parameters=None):
+
 		record_dict = {}
 		record_dict['source_name'] = praw_thing.name
 		record_dict['bot_username'] = self._bot_username
+		record_dict['author'] = getattr(praw_thing.author, 'name', '')
 		record_dict['subreddit'] = praw_thing.subreddit
 
 		if text_generation_parameters:
@@ -397,7 +407,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		# Check that one has not been completed or in the process of, before submitting
 
 		pending_submissions = list(db_Thing.select(db_Thing).where(fn.Lower(db_Thing.subreddit) == subreddit.lower()).
-					where(db_Thing.source_name.startswith('t3_')).
+					where(db_Thing.source_name.startswith('t3_new_submission')).
 					where(db_Thing.bot_username == self._bot_username).
 					where(db_Thing.status <= 7).
 					where(db_Thing.created_utc > (datetime.utcnow() - timedelta(hours=hourly_frequency))))
@@ -408,7 +418,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		recent_submissions = list(db_Thing.select(db_Thing).where(fn.Lower(db_Thing.subreddit) == subreddit.lower()).
 					where(db_Thing.source_name.startswith('t3_')).
-					where(db_Thing.bot_username == self._bot_username).
+					where(db_Thing.author == self._bot_username).
 					where(db_Thing.status == 8).
 					where(db_Thing.created_utc > (datetime.utcnow() - timedelta(hours=hourly_frequency))))
 
@@ -428,7 +438,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		text_generation_parameters = self._default_text_generation_parameters.copy()
 		new_submission_tag = self._get_random_new_submission_tag(subreddit, use_reply_sense=self._use_reply_sense)
 		text_generation_parameters['prompt'] = new_submission_tag
-		text_generation_parameters['max_length'] = 1000
+		text_generation_parameters['max_length'] = 1500
 		new_submission_thing['text_generation_parameters'] = text_generation_parameters
 
 		if new_submission_tag.startswith('<|sols'):

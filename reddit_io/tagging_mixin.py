@@ -90,7 +90,7 @@ class TaggingMixin():
 	def tag_comment(self, praw_thing, use_reply_sense=False):
 		if use_reply_sense:
 
-			if praw_thing.submission.author == praw_thing.author:
+			if praw_thing.submission.author.name == praw_thing.author:
 				return f'<|soopr u/{praw_thing.author}|>{praw_thing.body}<|eoopr|>'
 
 			parent_parent = None
