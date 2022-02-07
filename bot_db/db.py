@@ -93,7 +93,7 @@ def on_presave_handler(model_class, instance, created):
 		# Text has been generated and either an image is ready or no image is to be made.
 		instance.status = 7
 
-	print(f'updating status of {instance} from {before_status} to {instance.status}')
+	# print(f'updating status of {instance} from {before_status} to {instance.status}')
 
 
 def create_db_tables():
