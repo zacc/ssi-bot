@@ -97,12 +97,12 @@ class RedditIO(threading.Thread, LogicMixin):
 		while True:
 			logging.info(f"Beginning to process inbox stream")
 
-			# try:
-			# 	self.poll_inbox_stream()
-			# except:
-			# 	logging.exception("Exception occurred while processing the inbox streams")
+			try:
+				self.poll_inbox_stream()
+			except:
+				logging.exception("Exception occurred while processing the inbox streams")
 
-			# logging.info(f"Beginning to process incoming reddit streams")
+			logging.info(f"Beginning to process incoming reddit streams")
 
 			try:
 				self.poll_incoming_streams()
