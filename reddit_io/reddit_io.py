@@ -26,7 +26,6 @@ class RedditIO(threading.Thread, LogicMixin):
 	Advised that praw can have problems with threads,
 	so decided to keep all praw tasks in one daemon
 	"""
-	daemon = True
 
 	_praw = None
 
@@ -36,7 +35,7 @@ class RedditIO(threading.Thread, LogicMixin):
 	_default_text_generation_parameters = default_text_generation_parameters
 
 	def __init__(self, bot_username):
-		super().__init__(name=bot_username)
+		super().__init__(name=bot_username, daemon=True)
 
 		self._bot_username = bot_username
 
@@ -94,8 +93,10 @@ class RedditIO(threading.Thread, LogicMixin):
 
 	def run(self):
 
-		# pick up incoming submissions, comments etc from reddit and submit jobs for them
+		# synchronize bot's own posts to the database
+		self.synchronize_bots_comments_submissions()
 
+		# pick up incoming submissions, comments etc from reddit and submit jobs for them
 		while True:
 
 			try:

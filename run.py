@@ -25,8 +25,6 @@ def main():
 
 		# initialise reddit_io
 		bot_io = RedditIO(bot_username=bot)
-		# synchronize bot's own posts to the databse
-		bot_io.synchronize_bots_comments_submissions()
 
 		# Start the reddit IO daemon which will pick up incoming
 		# submissions/comments and send outgoing ones
