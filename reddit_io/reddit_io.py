@@ -85,6 +85,9 @@ class RedditIO(threading.Thread, LogicMixin):
 		# It is not backwards compatible between old models. The model has to be trained with this 'sense'
 		self._use_reply_sense = self._config[self._bot_username].getboolean('use_reply_sense', False)
 
+		self._base_probability = self._config[self._bot_username].getfloat('base_reply_probability', -0.2)
+		self._positive_keyword_boost = self._config[self._bot_username].getfloat('positive_keyword_boost', 0.5)
+
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini
 		self._praw = praw.Reddit(self._bot_username)

@@ -17,6 +17,8 @@ class LogicMixin(TaggingMixin):
 	while taking updates on the main classes.
 	"""
 
+	_do_not_reply_bot_usernames = ['automoderator', 'reddit', 'profanitycounter']
+
 	def _collate_tagged_comment_history(self, loop_thing, to_level=6, use_reply_sense=False):
 		"""
 		Loop backwards (upwards in reddit terms) from the praw_thing through the comment up x times,
@@ -89,7 +91,7 @@ class LogicMixin(TaggingMixin):
 		elif praw_thing.author.name.lower() == self._praw.user.me().name.lower():
 			# The incoming praw object's author is the bot, so we won't reply
 			return 0
-		elif praw_thing.author.name in ['AutoModerator', 'reddit']:
+		elif praw_thing.author.name.lower() in self._do_not_reply_bot_usernames:
 			# Ignore comments/messages from Admins
 			return 0
 
@@ -127,26 +129,21 @@ class LogicMixin(TaggingMixin):
 		if submission_link_flair_text.lower() in ['announcement']:
 			return 0
 
-		# if the bot is mentioned,
-		# or its username is in the thing_text_content, reply 100%
-		# Or it is an inbox DM
-		# Only an inbox message will have a type
-		if getattr(praw_thing, 'type', '') == 'username_mention' or\
-			self._praw.user.me().name.lower() in thing_text_content.lower() or\
-			isinstance(praw_thing, praw_Message):
-			return 1
-
-		if isinstance(praw_thing, praw_Comment):
-			# Find the depth of the comment
-			if self._find_depth_of_comment(praw_thing) > 9:
-				# don't reply to comments at > 9, to stop bots replying forever
-				# and also to keep the bot's comments high up and visible
-				return 0
-
 		# From here we will start to calculate the probability cumulatively
 		# Adjusting the weights here will change how frequently the bot will post
 		# Try not to spam the sub too much and let other bots and humans have space to post
-		base_probability = -0.2
+		base_probability = self._base_probability
+
+		if isinstance(praw_thing, praw_Comment):
+			# Find the depth of the comment
+			comment_depth = self._find_depth_of_comment(praw_thing)
+			if comment_depth > 12:
+				# don't reply to deep comments, to prevent bots replying in a loop
+				return 0
+			else:
+				# Reduce the reply probability 5% for each level of comment depth
+				# to keep the replies higher up
+				base_probability -= (comment_depth * 0.05)
 
 		# Check the flair and username to see if the author might be a bot
 		# 'Verified GPT-2 Bot' is only valid on r/subsimgpt2interactive
@@ -161,7 +158,7 @@ class LogicMixin(TaggingMixin):
 
 		if len(self._keyword_helper.positive_keyword_matches(thing_text_content)) > 0:
 			# A positive keyword was found, increase probability of replying
-			base_probability += 0.3
+			base_probability += self._positive_keyword_boost
 
 		if isinstance(praw_thing, praw_Submission):
 			# it's a brand new submission and the bot can
@@ -183,7 +180,9 @@ class LogicMixin(TaggingMixin):
 				base_probability += 0.3
 
 		# if the bot is mentioned, or its username is in the thing_text_content, reply 100%
-		if getattr(praw_thing, 'type', '') == 'username_mention' or self._praw.user.me().name.lower() in thing_text_content.lower():
+		if getattr(praw_thing, 'type', '') == 'username_mention' or\
+			self._praw.user.me().name.lower() in thing_text_content.lower() or\
+			isinstance(praw_thing, praw_Message):
 			base_probability = 1
 
 		reply_probability = min(base_probability, 1)
