@@ -90,14 +90,15 @@ class ImageScraper(threading.Thread, TaggingMixin):
 		pos_tagged_text = nltk.pos_tag(tokenized)
 
 		# Extract all nouns, verbs and adverbs and append to the existing
-		search_keywords.append([i[0] for i in pos_tagged_text if i[1][:2] in ['NN', 'VB', 'RB']])
+		search_keywords.extend([i[0] for i in pos_tagged_text if i[1][:2] in ['NN', 'VB', 'RB']])
 
 		# Truncate to 10 keywords to improve effectiveness of the search
 		search_keywords = search_keywords[:10]
+		search_keywords_as_string = ' '.join(search_keywords)
 
 		# Collect and encode all search url parameters
 		# If on the 2nd attempt, jump ahead
-		search_parameters = {'q': search_keywords,
+		search_parameters = {'q': search_keywords_as_string,
 							'form': 'HDRSC2',
 							# 'qft': '+filterui:photo-photo',
 							# 'qft': '+filterui:imagesize-large',
