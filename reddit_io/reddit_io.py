@@ -60,10 +60,10 @@ class RedditIO(threading.Thread, LogicMixin):
 		if new_submission_schedule_string != '':
 			self._new_submission_schedule = [(y[0].lower().strip(), int(y[1])) for y in [x.split('=') for x in new_submission_schedule_string.split(',')]]
 			pretty_submission_schedule_list = [f"{x[0]}: {x[1]} hourly" for x in self._new_submission_schedule]
-			logging.info(f"New submission schedule: {', '.join(pretty_submission_schedule_list)}.")
+			logging.info(f"{self._bot_username} new submission schedule: {', '.join(pretty_submission_schedule_list)}.")
 
 		self._image_post_frequency = self._config[self._bot_username].getfloat('image_post_frequency', 0)
-		logging.info(f"Image post frequency has been set to {(self._image_post_frequency * 100)}%.")
+		logging.info(f"{self._bot_username} image post frequency has been set to {(self._image_post_frequency * 100)}%.")
 
 		self._image_post_search_prefix = self._config[self._bot_username].get('image_post_search_prefix', None)
 
@@ -372,8 +372,8 @@ class RedditIO(threading.Thread, LogicMixin):
 		# at first run, pick up Bot's own recent submissions and comments
 		# to 'sync' the database and prevent duplicate replies
 
-		submissions = self._praw.redditor(self._praw.user.me().name).submissions.new(limit=25)
-		comments = self._praw.redditor(self._praw.user.me().name).comments.new(limit=200)
+		submissions = self._praw.redditor(self._praw.user.me().name).submissions.new(limit=20)
+		comments = self._praw.redditor(self._praw.user.me().name).comments.new(limit=100)
 
 		for praw_thing in chain_listing_generators(submissions, comments):
 
@@ -397,13 +397,24 @@ class RedditIO(threading.Thread, LogicMixin):
 		# Note that this is using the prefixed reddit id, ie t3_, t1_
 		# do not mix it with the unprefixed version which is called id!
 		# Filter by the bot username
-		record = db_Thing.get_or_none(db_Thing.source_name == praw_thing.name, db_Thing.bot_username == self._bot_username)
+		record = db_Thing.get_or_none(db_Thing.source_name == self._get_name_for_thing(praw_thing), db_Thing.bot_username == self._bot_username)
 		return record
+
+	def _get_name_for_thing(self, praw_thing):
+		# Infer the name for the thing without doing a network request
+		if isinstance(praw_thing, praw_Comment):
+			return f"t1_{praw_thing.id}"
+		if isinstance(praw_thing, praw_Submission):
+			return f"t3_{praw_thing.id}"
+		if isinstance(praw_thing, praw_Message):
+			return f"t4_{praw_thing.id}"
+
 
 	def insert_praw_thing_into_database(self, praw_thing, text_generation_parameters=None):
 
 		record_dict = {}
 		record_dict['source_name'] = praw_thing.name
+		record_dict['created_utc'] = praw_thing.created_utc
 		record_dict['bot_username'] = self._bot_username
 		record_dict['author'] = getattr(praw_thing.author, 'name', '')
 		record_dict['subreddit'] = praw_thing.subreddit
@@ -419,13 +430,13 @@ class RedditIO(threading.Thread, LogicMixin):
 		# Check that one has not been completed or in the process of, before submitting
 
 		pending_submissions = list(db_Thing.select(db_Thing).where(fn.Lower(db_Thing.subreddit) == subreddit.lower()).
-					where(db_Thing.source_name.startswith('t3_new_submission')).
+					where(db_Thing.source_name == 't3_new_submission').
 					where(db_Thing.bot_username == self._bot_username).
 					where(db_Thing.status <= 7).
 					where(db_Thing.created_utc > (datetime.utcnow() - timedelta(hours=hourly_frequency))))
 
 		if pending_submissions:
-			logging.info(f"A submission for {subreddit} is pending...")
+			logging.info(f"A submission is pending for r/{subreddit}...")
 			return
 
 		recent_submissions = list(db_Thing.select(db_Thing).where(fn.Lower(db_Thing.subreddit) == subreddit.lower()).
