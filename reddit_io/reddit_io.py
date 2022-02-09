@@ -51,7 +51,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		subreddits_config_string = self._config[self._bot_username].get('subreddits', 'test')
 		self._subreddits = [x.strip() for x in subreddits_config_string.lower().split(',')]
 
-		logging.info(f"{self.bot_username} will reply to comments on subreddits: {', '.join(self._subreddits)}.")
+		logging.info(f"{self._bot_username} will reply to comments on subreddits: {', '.join(self._subreddits)}.")
 
 		subreddit_flair_id_string = self._config[self._bot_username].get('subreddit_flair_id_map', '')
 		if subreddit_flair_id_string != '':
@@ -178,6 +178,10 @@ class RedditIO(threading.Thread, LogicMixin):
 				thing_label = 'comment' if isinstance(praw_thing, praw_Comment) else 'submission'
 				logging.info(f"New {thing_label} thing received {praw_thing.name} from {praw_thing.subreddit}")
 
+				if not self._can_reply_to_praw_thing(praw_thing):
+					# It's been deleted, removed or locked. Skip this thing entirely.
+					continue
+
 				reply_probability = self.calculate_reply_probability(praw_thing)
 
 				text_generation_parameters = None
@@ -232,6 +236,10 @@ class RedditIO(threading.Thread, LogicMixin):
 				logging.error(f'Could not get the source praw thing for {post_job.id}')
 				return
 
+			if not self._can_reply_to_praw_thing(source_praw_thing):
+				post_job.status = 9
+				return
+
 			reply_parameters = self.extract_reply_from_generated_text(\
 				post_job.text_generation_parameters['prompt'], post_job.generated_text)
 
@@ -260,7 +268,7 @@ class RedditIO(threading.Thread, LogicMixin):
 				# Clear the generated text on the post_job
 				# then it can try to re-generate it with a new random seed
 				post_job.generated_text = None
-				post_job.save()
+				# post_job.save()
 				return
 
 			# Reply to the source thing with the generated text. A new praw_thing is returned
@@ -272,7 +280,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			# Set the name value of the reply that was posted, to finalize the job
 			post_job.posted_name = reply_praw_thing.name
-			post_job.save()
+			# post_job.save()
 
 			logging.info(f"Job {post_job.id} reply submitted successfully")
 		except Exception as e:
@@ -283,7 +291,7 @@ class RedditIO(threading.Thread, LogicMixin):
 				# Increment the post attempts counter.
 				# This is to prevent posting too many times if there are errors
 				post_job.reddit_post_attempts += 1
-				post_job.save()
+			post_job.save()
 
 	def post_outgoing_new_submission_jobs(self, post_job):
 
@@ -330,7 +338,7 @@ class RedditIO(threading.Thread, LogicMixin):
 				return
 
 			post_job.posted_name = submission_praw_thing.name
-			post_job.save()
+			# post_job.save()
 
 			# Put the praw thing into the database so it's registered as a submitted job
 			self.insert_praw_thing_into_database(submission_praw_thing)
@@ -344,7 +352,7 @@ class RedditIO(threading.Thread, LogicMixin):
 				# 'Reset' the generated image and try again
 				post_job.generated_image_path = None
 				post_job.reddit_post_attempts = 0
-				post_job.save()
+				# post_job.save()
 
 		except Exception as e:
 			raise e
@@ -354,7 +362,7 @@ class RedditIO(threading.Thread, LogicMixin):
 				# Increment the post attempts counter.
 				# This is to prevent posting too many times if there are errors
 				post_job.reddit_post_attempts += 1
-				post_job.save()
+			post_job.save()
 
 	def synchronize_bots_comments_submissions(self):
 		# at first run, pick up Bot's own recent submissions and comments
@@ -433,6 +441,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		new_submission_thing['source_name'] = 't3_new_submission'
 		new_submission_thing['bot_username'] = self._bot_username
+		new_submission_thing['author'] = self._bot_username
 		new_submission_thing['subreddit'] = subreddit
 
 		text_generation_parameters = self._default_text_generation_parameters.copy()
@@ -465,6 +474,26 @@ class RedditIO(threading.Thread, LogicMixin):
 					where(db_Thing.source_name == 't3_new_submission').
 					where(db_Thing.bot_username == self._bot_username).
 					where(db_Thing.status == 7))
+
+	def _can_reply_to_praw_thing(self, praw_thing):
+
+		if isinstance(praw_thing, praw_Comment):
+			if praw_thing.author is None or praw_thing.body in ['[removed]', '[deleted]']:
+				logging.error(f'{praw_thing} has been deleted.')
+				return False
+
+		elif isinstance(praw_thing, praw_Submission):
+
+			if praw_thing.removed_by_category is not None:
+				logging.error(f'{praw_thing} has been removed or deleted.')
+				return False
+
+		source_submission = praw_thing.submission if isinstance(praw_thing, praw_Comment) else praw_thing
+		if source_submission.locked:
+			logging.error(f'{source_submission} has been locked.')
+			return False
+
+		return True
 
 	def _find_depth_of_comment(self, praw_comment):
 		"""
