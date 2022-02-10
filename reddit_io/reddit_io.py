@@ -462,7 +462,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		text_generation_parameters = self._default_text_generation_parameters.copy()
 		new_submission_tag = self._get_random_new_submission_tag(subreddit, use_reply_sense=self._use_reply_sense)
 		text_generation_parameters['prompt'] = new_submission_tag
-		text_generation_parameters['max_length'] = 1500
+		text_generation_parameters['max_length'] = 1000
 		new_submission_thing['text_generation_parameters'] = text_generation_parameters
 
 		if new_submission_tag.startswith('<|sols'):
