@@ -185,7 +185,7 @@ def main():
 							print(f"Request error! Could not download submission date, status code {submission_response.status_code}")
 						elif verbose:
 							print(f"Request error! Status code {submission_response.status_code}, retrying (attempt {submission_attempt} of {max_attempts})")
-						time.sleep(0.4) # give it a little bit more time if the request was not successful
+						time.sleep(0.5 + comment_attempt) # give it a little bit more time if the request was not successful
 						continue
 					else:
 						submission_success = True
@@ -255,7 +255,7 @@ def main():
 								print(f"Request error! Could not download comment data, status code {comment_response.status_code}")
 							elif verbose:
 								print(f"Request error! Status code {comment_response.status_code}, retrying (attempt {comment_attempt} of {max_attempts})")
-							time.sleep(0.4)
+							time.sleep(0.5 + comment_attempt)
 							continue
 						else:
 							comment_success = True
