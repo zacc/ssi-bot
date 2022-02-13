@@ -99,6 +99,11 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 		# pop the prompt out from the args
 		prompt = text_generation_parameters.pop('prompt', '')
 
+		if len(prompt) > 1500:
+			# The model can handle 1024 tokens, but a token is not just one character.
+			# Just truncate the long string to be safe and hope for the best :)
+			prompt = prompt[-1450:]
+
 		output_list = model.generate(prompt=prompt, args=text_generation_parameters)
 
 		end_time = time.time()

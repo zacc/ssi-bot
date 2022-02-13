@@ -64,12 +64,6 @@ class LogicMixin(TaggingMixin):
 
 			counter += 1
 
-		if len(prefix) > 1500:
-			# The model can handle 1024 tokens, but a token is not just one character.
-			# Just truncate the long string to be safe and hope for the best :)
-			return prefix[-1450:]
-
-		# print('returning prefix', prefix)
 		return prefix
 
 	def remove_username_mentions_from_string(self, string, username):
