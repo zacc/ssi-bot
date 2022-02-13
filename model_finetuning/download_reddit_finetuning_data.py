@@ -5,6 +5,8 @@ import time
 import os
 import json
 import threading
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 from queue import Queue
 
@@ -18,6 +20,11 @@ from db import create_tables
 
 config = ConfigParser()
 config.read('dataset.ini')
+
+
+# Set session globally fo the run
+http = requests.Session()
+
 
 verbose = False
 
@@ -54,6 +61,30 @@ def clean_text(text):
 	text = text.strip()
 
 	return text
+
+
+def get_with_retry(link: str):
+	"""
+	Performs a request using a re-try mechanism. Throws if
+	"""
+	# This could be a configuration within a dataset ini maybe?
+	retry_options = Retry(
+		total=10,  # Total number of attempts to try to perform a request. Adjust this parameter for number attempts.
+		status_forcelist=[429, 500, 502, 503, 504],  # Acceptable status codes to re-try on
+		allowed_methods=["GET"],  # Methods to allow re-try for
+		backoff_factor=1 # 1 second the successive sleeps will be 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256.
+	)
+	# Network connections are lossy, congested and servers fail. Account for failures and have a retry strategy.
+	adapter = HTTPAdapter(max_retries=retry_options)
+	http.mount(link, adapter)
+	response = http.get(link)
+	if len(response.text) > 0:
+		return response
+	else:
+		print("No response body found")
+		return get_with_retry(link)
+
+
 
 
 def write_to_database(q):
@@ -178,14 +209,15 @@ def main():
 
 					submission_attempt += 1
 
-					submission_response = requests.get(submission_search_link)
-
+					submission_response = get_with_retry(submission_search_link)
+					# TODO: Remove this but check that functionality remains the same.
 					if submission_response.status_code != 200:
 						if submission_attempt >= max_attempts:
 							print(f"Request error! Could not download submission date, status code {submission_response.status_code}")
 						elif verbose:
 							print(f"Request error! Status code {submission_response.status_code}, retrying (attempt {submission_attempt} of {max_attempts})")
-						time.sleep(0.4) # give it a little bit more time if the request was not successful
+							# No additional time should now be required.
+						time.sleep(0.0)
 						continue
 					else:
 						submission_success = True
@@ -193,7 +225,7 @@ def main():
 					with open(submission_output_path, "w") as f:
 						f.write(submission_response.text)
 
-					time.sleep(0.1)
+					time.sleep(0.0)
 
 			else:
 				if verbose:
@@ -206,7 +238,7 @@ def main():
 			# Put the submission path into the queue to write into the database
 			q.put(submission_output_path)
 
-			# now re-open the file and load the json, 
+			# now re-open the file and load the json,
 			# we'll try and pick up the comments for each submission id
 			submission_json = None
 
@@ -248,14 +280,16 @@ def main():
 
 						comment_attempt += 1
 
-						comment_response = requests.get(comment_search_link)
+						comment_response = get_with_retry(comment_search_link)
 
+						#TODO: Remove this but check that functionality remains the same.
 						if comment_response.status_code != 200:
 							if comment_attempt >= max_attempts:
 								print(f"Request error! Could not download comment data, status code {comment_response.status_code}")
 							elif verbose:
 								print(f"Request error! Status code {comment_response.status_code}, retrying (attempt {comment_attempt} of {max_attempts})")
-							time.sleep(0.4)
+								# Setting to 0 because this is no longer needed.
+							time.sleep(0.0)
 							continue
 						else:
 							comment_success = True
@@ -264,7 +298,8 @@ def main():
 							f.write(comment_response.text)
 
 						# Have to sleep a bit here or else pushshift will start to block our requests
-						time.sleep(0.05)
+						# But not if we use a re-try that handles it for us.
+						time.sleep(0.00)
 
 				# Put it into the queue to write into the database
 				q.put(comment_output_path)
