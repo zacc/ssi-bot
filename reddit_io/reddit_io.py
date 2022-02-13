@@ -128,7 +128,8 @@ class RedditIO(threading.Thread, LogicMixin):
 			try:
 				logging.info(f"Beginning to attempt to schedule a new submission")
 				for subreddit, frequency in self._new_submission_schedule:
-					self.attempt_schedule_new_submission(subreddit, frequency)
+					if frequency > 0:
+						self.attempt_schedule_new_submission(subreddit, frequency)
 			except:
 				logging.exception("Exception occurred while scheduling a new submission")
 
