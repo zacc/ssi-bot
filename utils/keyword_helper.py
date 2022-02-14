@@ -11,8 +11,9 @@ class KeywordHelper():
 	_default_negative_keywords = [
 		('ar', 'yan'), ('ausch, witz'),
 		('black', ' people'),
-		('child p', 'orn'), ('concentrati', 'on camp'),
-		('fag', 'got'),
+		('child p', 'orn'), ('chi', 'nk'), ('concentrati', 'on camp'),
+		('da', 'go'),
+		('fag', 'got'), ('fuc', 'k you'),
 		('hit', 'ler'), ('holo', 'caust'),
 		('inc', 'est'), ('israel'),
 		('jew', 'ish'), ('je', 'ws'),
@@ -20,9 +21,11 @@ class KeywordHelper():
 		('lol', 'i'),
 		('maste', 'r race'), ('mus', 'lim'),
 		('nation', 'alist'), ('na', 'zi'), ('nig', 'ga'), ('nig', 'ger'),
-		('pae', 'do'), ('pale', 'stin'), ('ped', 'o'),
-		('rac' 'ist'), (' r', 'ape'), ('ra', 'ping'),
-		('sl', 'ut'), ('swas', 'tika'),
+		('pae', 'do'), ('pak', 'i'), ('pale', 'stin'), ('ped', 'o'),
+		('rac' 'ist'), (' r', 'ape'), ('ra', 'ping'), ('ret', 'ard'),
+		('sl', 'ut'), ('sp', 'ic'), ('swas', 'tika'),
+		('tra', 'nny'),
+		('white p', 'ower'),
 	]
 
 	_positive_keywords = []
