@@ -12,9 +12,10 @@ from .tagging_mixin import TaggingMixin
 
 class LogicMixin(TaggingMixin):
 	"""
-	This mixin contains key functions that are paired with reddit_io.py
-	It is abstracted so that users can update this code on their fork,
-	while taking updates on the main classes.
+	This is not really a mixin..
+	If just contains key functions that are paired with reddit_io.py
+	It is abstracted so that users can customise their bot in this code
+	while easily taking updates on reddit_io.py.
 	"""
 
 	_do_not_reply_bot_usernames = ['automoderator', 'reddit', 'profanitycounter']
@@ -126,7 +127,7 @@ class LogicMixin(TaggingMixin):
 		# From here we will start to calculate the probability cumulatively
 		# Adjusting the weights here will change how frequently the bot will post
 		# Try not to spam the sub too much and let other bots and humans have space to post
-		base_probability = self._base_probability
+		base_probability = self._base_reply_probability
 
 		if isinstance(praw_thing, praw_Comment):
 			# Find the depth of the comment
@@ -135,55 +136,55 @@ class LogicMixin(TaggingMixin):
 				# don't reply to deep comments, to prevent bots replying in a loop
 				return 0
 			else:
-				# Reduce the reply probability 5% for each level of comment depth
+				# Reduce the reply probability x% for each level of comment depth
 				# to keep the replies higher up
-				base_probability -= (comment_depth * 0.05)
+				base_probability -= ((comment_depth - 1) * self._comment_depth_reply_penalty)
 
 		# Check the flair and username to see if the author might be a bot
 		# 'Verified GPT-2 Bot' is only valid on r/subsimgpt2interactive
 		# Sometimes author_flair_text will be present but None
 		if 'verified gpt-2' in (getattr(praw_thing, 'author_flair_text', '') or '').lower()\
 			or any(praw_thing.author.name.lower().endswith(i) for i in ['ssi', 'bot', 'gpt2']):
-			# Reduce the reply probability by 10% to prioritise replying to humans
-			base_probability += -0.1
+			# Adjust for when the author is a bot
+			base_probability += self._bot_author_reply_boost
 		else:
 			# assume humanoid if author metadata doesn't meet the criteria for a bot
-			base_probability += 0.3
+			base_probability += self._human_author_reply_boost
 
 		if len(self._keyword_helper.positive_keyword_matches(thing_text_content)) > 0:
 			# A positive keyword was found, increase probability of replying
-			base_probability += self._positive_keyword_boost
+			base_probability += self._positive_keyword_reply_boost
 
 		if isinstance(praw_thing, praw_Submission):
-			# it's a brand new submission and the bot can
-			# comment at the top level and get some exposure..
-			base_probability += 0.4
+			# it's a brand new submission.
+			# This is mostly obsoleted by the depth penalty
+			base_probability += self._new_submission_reply_boost
 
 		if isinstance(praw_thing, praw_Comment):
 			if praw_thing.parent().author == self._praw.user.me().name:
 				# the post prior to this is by the bot
-				base_probability += 0.1
+				base_probability += self._own_comment_reply_boost
 
-			if any(kw.lower() in praw_thing.body.lower() for kw in ['?', ' you']):
+			if any(kw.lower() in praw_thing.body.lower() for kw in ['?', ' you', 'what', 'how', 'when', 'why']):
 				# any interrogative terms in the comment,
 				# an increased reply probability
-				base_probability += 0.3
+				base_probability += self._interrogative_reply_boost
 
 			if praw_thing.submission.author == self._praw.user.me().name:
-				# the submission is by the author, and favor that
-				base_probability += 0.3
+				# the submission is by the author, and favor that strongly
+				base_probability += self._own_submission_reply_boost
 
 		# if the bot is mentioned, or its username is in the thing_text_content, reply 100%
 		if getattr(praw_thing, 'type', '') == 'username_mention' or\
 			self._praw.user.me().name.lower() in thing_text_content.lower() or\
 			isinstance(praw_thing, praw_Message):
-			base_probability = 1
+			base_probability = self._message_mention_reply_probability
 
 		reply_probability = min(base_probability, 1)
 
 		# work out the age of submission in hours
 		age_of_submission = (datetime.utcnow() - submission_created_utc).total_seconds() / 3600
-		# calculate rate of decay over 48 hours
-		rate_of_decay = max(0, 1 - (age_of_submission / 48))
+		# calculate rate of decay over x hours
+		rate_of_decay = max(0, 1 - (age_of_submission / 24))
 		# multiply the rate of decay by the reply probability
 		return reply_probability * rate_of_decay

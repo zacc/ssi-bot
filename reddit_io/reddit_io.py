@@ -84,8 +84,21 @@ class RedditIO(threading.Thread, LogicMixin):
 		# It is not backwards compatible between old models. The model has to be trained with this 'sense'
 		self._use_reply_sense = self._config[self._bot_username].getboolean('use_reply_sense', False)
 
-		self._base_probability = self._config[self._bot_username].getfloat('base_reply_probability', -0.2)
-		self._positive_keyword_boost = self._config[self._bot_username].getfloat('positive_keyword_boost', 0.5)
+		# Variables for the probability of replying to comments
+		# Please be nice and don't spam the subreddits by increasing these values too high.
+		# The overall concept of these default values are to increase two types of replies:
+		# 1) Keyword based, where the bot replies to comments with positive keywords that are related to its training material
+		# 2) Replying where human users replied directly to the bot and to continue that comment chain.
+		self._base_reply_probability = self._config[self._bot_username].getfloat('base_reply_probability', 0)
+		self._comment_depth_reply_penalty = self._config[self._bot_username].getfloat('comment_depth_reply_penalty', 0.08)
+		self._positive_keyword_reply_boost = self._config[self._bot_username].getfloat('positive_keyword_reply_boost', 0.5)
+		self._bot_author_reply_boost = self._config[self._bot_username].getfloat('bot_author_reply_boost', 0.0)
+		self._human_author_reply_boost = self._config[self._bot_username].getfloat('human_author_reply_boost', 0.4)
+		self._new_submission_reply_boost = self._config[self._bot_username].getfloat('new_submission_reply_boost', 0.1)
+		self._own_comment_reply_boost = self._config[self._bot_username].getfloat('own_comment_reply_boost', 0.4)
+		self._interrogative_reply_boost = self._config[self._bot_username].getfloat('interrogative_reply_boost', 0.3)
+		self._own_submission_reply_boost = self._config[self._bot_username].getfloat('own_submission_reply_boost', 0.5)
+		self._message_mention_reply_probability = self._config[self._bot_username].getfloat('message_mention_reply_probability', 1)
 
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini
@@ -463,7 +476,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		text_generation_parameters = self._default_text_generation_parameters.copy()
 		new_submission_tag = self._get_random_new_submission_tag(subreddit, use_reply_sense=self._use_reply_sense)
 		text_generation_parameters['prompt'] = new_submission_tag
-		text_generation_parameters['max_length'] = 1000
+		# text_generation_parameters['max_length'] = 1000
 		new_submission_thing['text_generation_parameters'] = text_generation_parameters
 
 		if new_submission_tag.startswith('<|sols'):
