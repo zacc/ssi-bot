@@ -164,6 +164,10 @@ class RedditIO(threading.Thread, LogicMixin):
 			if not record:
 				logging.info(f"New message received in inbox, {praw_thing.id}")
 
+				if self._is_praw_thing_removed_or_deleted(praw_thing):
+					# It's been deleted, removed or locked. Skip this thing entirely.
+					continue
+
 				reply_probability = self.calculate_reply_probability(praw_thing)
 
 				text_generation_parameters = None
@@ -196,7 +200,7 @@ class RedditIO(threading.Thread, LogicMixin):
 				thing_label = 'comment' if isinstance(praw_thing, praw_Comment) else 'submission'
 				logging.info(f"New {thing_label} thing received {praw_thing.name} from {praw_thing.subreddit}")
 
-				if not self._can_reply_to_praw_thing(praw_thing):
+				if self._is_praw_thing_removed_or_deleted(praw_thing):
 					# It's been deleted, removed or locked. Skip this thing entirely.
 					continue
 
@@ -254,7 +258,9 @@ class RedditIO(threading.Thread, LogicMixin):
 				logging.error(f'Could not get the source praw thing for {post_job.id}')
 				return
 
-			if not self._can_reply_to_praw_thing(source_praw_thing):
+			if self._is_praw_thing_removed_or_deleted(source_praw_thing):
+				# It's removed or deleted and cannot reply so disable this job
+				# by setting the status to 9
 				post_job.status = 9
 				return
 
@@ -504,25 +510,30 @@ class RedditIO(threading.Thread, LogicMixin):
 					where(db_Thing.bot_username == self._bot_username).
 					where(db_Thing.status == 7))
 
-	def _can_reply_to_praw_thing(self, praw_thing):
+	def _is_praw_thing_removed_or_deleted(self, praw_thing):
+
+		if praw_thing.author is None:
+			logging.error(f'{praw_thing} has been deleted.')
+			return True
 
 		if isinstance(praw_thing, praw_Comment):
-			if praw_thing.author is None or praw_thing.body in ['[removed]', '[deleted]']:
-				logging.error(f'{praw_thing} has been deleted.')
-				return False
+			submission = praw_thing.submission
+
+			if praw_thing.body in ['[removed]', '[deleted]']:
+				logging.error(f'Comment {praw_thing} has been deleted.')
+				return True
 
 		elif isinstance(praw_thing, praw_Submission):
+			submission = praw_thing
 
-			if praw_thing.removed_by_category is not None:
-				logging.error(f'{praw_thing} has been removed or deleted.')
-				return False
+		if submission:
+			if submission.author is None or submission.removed_by_category is not None:
+				logging.error(f'Submission {submission} has been removed or deleted.')
+				return True
 
-		source_submission = praw_thing.submission if isinstance(praw_thing, praw_Comment) else praw_thing
-		if source_submission.locked:
-			logging.error(f'{source_submission} has been locked.')
-			return False
-
-		return True
+			if submission.locked:
+				logging.error(f'Submission {submission} has been locked.')
+				return True
 
 	def _find_depth_of_comment(self, praw_comment):
 		"""
