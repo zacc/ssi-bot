@@ -293,7 +293,7 @@ class RedditIO(threading.Thread, LogicMixin):
 				# Clear the generated text on the post_job
 				# then it can try to re-generate it with a new random seed
 				post_job.generated_text = None
-				# post_job.save()
+				post_job.save()
 				return
 
 			# Reply to the source thing with the generated text. A new praw_thing is returned
@@ -305,7 +305,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			# Set the name value of the reply that was posted, to finalize the job
 			post_job.posted_name = reply_praw_thing.name
-			# post_job.save()
+			post_job.save()
 
 			logging.info(f"Job {post_job.id} reply submitted successfully")
 		except Exception as e:
@@ -363,12 +363,12 @@ class RedditIO(threading.Thread, LogicMixin):
 				return
 
 			post_job.posted_name = submission_praw_thing.name
-			# post_job.save()
+			post_job.save()
 
 			# Put the praw thing into the database so it's registered as a submitted job
 			self.insert_praw_thing_into_database(submission_praw_thing)
 
-			logging.info(f"Job {post_job.id} submission submitted successfully")
+			logging.info(f"Job {post_job.id} submission submitted successfully: https://www.reddit.com/{submission_praw_thing.permalink}")
 
 		except praw.exceptions.RedditAPIException as e:
 			if 'DOMAIN_BANNED' in str(e):
@@ -377,7 +377,7 @@ class RedditIO(threading.Thread, LogicMixin):
 				# 'Reset' the generated image and try again
 				post_job.generated_image_path = None
 				post_job.reddit_post_attempts = 0
-				# post_job.save()
+				post_job.save()
 
 		except Exception as e:
 			raise e
