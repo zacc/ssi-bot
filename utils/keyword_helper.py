@@ -1,3 +1,4 @@
+import logging
 import re
 
 from configparser import ConfigParser
@@ -45,6 +46,12 @@ class KeywordHelper():
 
 	def positive_keyword_matches(self, text):
 		if self._positive_keywords:
+			regexs = []
+
+			for keyword in self._positive_keywords:
+				logging.info(f'creating regex with keyword {keyword}')
+				regexs.append(r"\b{}".format(keyword))
+
 			return [keyword for keyword in self._positive_keywords if re.search(r"\b{}".format(keyword), text, re.IGNORECASE)]
 		return []
 
