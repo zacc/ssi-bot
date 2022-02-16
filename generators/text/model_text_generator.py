@@ -86,7 +86,7 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 
 	def generate_text(self, bot_username, text_generation_parameters):
 
-		model_path = ROOT_DIR / self._config[bot_username]['model_path']
+		model_path = ROOT_DIR / self._config[bot_username]['text_model_path']
 
 		# if you are generating on CPU, keep use_cuda and fp16 both false.
 		# If you have a nvidia GPU you may enable these features
