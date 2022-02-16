@@ -72,7 +72,7 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 						job.save()
 
 				except:
-					logging.exception(f"Generating text for a {job} failed")
+					logging.exception(f"Generating text for job {job} failed")
 
 				finally:
 					# Increment the counter because we're about to generate text

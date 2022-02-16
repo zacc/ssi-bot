@@ -93,7 +93,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		self._comment_depth_reply_penalty = self._config[self._bot_username].getfloat('comment_depth_reply_penalty', 0.08)
 		self._positive_keyword_reply_boost = self._config[self._bot_username].getfloat('positive_keyword_reply_boost', 0.5)
 		self._bot_author_reply_boost = self._config[self._bot_username].getfloat('bot_author_reply_boost', 0.0)
-		self._human_author_reply_boost = self._config[self._bot_username].getfloat('human_author_reply_boost', 0.4)
+		self._human_author_reply_boost = self._config[self._bot_username].getfloat('human_author_reply_boost', 0.3)
 		self._new_submission_reply_boost = self._config[self._bot_username].getfloat('new_submission_reply_boost', 0.1)
 		self._own_comment_reply_boost = self._config[self._bot_username].getfloat('own_comment_reply_boost', 0.4)
 		self._interrogative_reply_boost = self._config[self._bot_username].getfloat('interrogative_reply_boost', 0.3)
@@ -186,8 +186,8 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		# Setup all the streams for new comments and submissions
 		sr = self._praw.subreddit('+'.join(self._subreddits))
-		submissions = sr.stream.submissions(pause_after=0)
-		comments = sr.stream.comments(pause_after=0)
+		submissions = sr.stream.submissions(skip_existing=True, pause_after=0)
+		comments = sr.stream.comments(skip_existing=True, pause_after=0)
 
 		# Merge the streams in a single loop to DRY the code
 		for praw_thing in chain_listing_generators(submissions, comments):
@@ -209,6 +209,8 @@ class RedditIO(threading.Thread, LogicMixin):
 				text_generation_parameters = None
 
 				if random.random() < reply_probability:
+					logging.info(f"Configuring a job for {praw_thing.name} with reply probability {reply_probability}%")
+
 					# It will generate a reply, so grab the parameters before we put it into the database
 					text_generation_parameters = self.get_text_generation_parameters(praw_thing)
 
@@ -217,7 +219,6 @@ class RedditIO(threading.Thread, LogicMixin):
 
 	def get_text_generation_parameters(self, praw_thing):
 
-		logging.info(f"Configuring a textgen job for {praw_thing.name}")
 		# Collate history of comments prior to prompt the GPT-2 model with.
 		comment_history = self._collate_tagged_comment_history(praw_thing, use_reply_sense=self._use_reply_sense)
 		# Remove any bot mentions from the text because of the bot's fragile sense of self
