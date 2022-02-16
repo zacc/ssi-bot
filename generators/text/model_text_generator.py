@@ -83,7 +83,6 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 				# there are no jobs at all in the queue
 				# Rest a little before attempting again
 				time.sleep(30)
-				continue
 
 	def generate_text(self, bot_username, text_generation_parameters):
 
