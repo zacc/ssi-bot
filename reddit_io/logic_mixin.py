@@ -160,15 +160,15 @@ class LogicMixin(TaggingMixin):
 			# This is mostly obsoleted by the depth penalty
 			base_probability += self._new_submission_reply_boost
 
+		if any(kw.lower() in thing_text_content.lower() for kw in ['?', ' you', 'what', 'how', 'when', 'why']):
+			# any interrogative terms in the comment,
+			# an increased reply probability
+			base_probability += self._interrogative_reply_boost
+
 		if isinstance(praw_thing, praw_Comment):
 			if praw_thing.parent().author == self._praw.user.me().name:
 				# the post prior to this is by the bot
 				base_probability += self._own_comment_reply_boost
-
-			if any(kw.lower() in praw_thing.body.lower() for kw in ['?', ' you', 'what', 'how', 'when', 'why']):
-				# any interrogative terms in the comment,
-				# an increased reply probability
-				base_probability += self._interrogative_reply_boost
 
 			if praw_thing.submission.author == self._praw.user.me().name:
 				# the submission is by the author, and favor that strongly
