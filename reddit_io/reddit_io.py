@@ -516,6 +516,8 @@ class RedditIO(threading.Thread, LogicMixin):
 			logging.error(f'{praw_thing} has been deleted.')
 			return True
 
+		submission = None
+
 		if isinstance(praw_thing, praw_Comment):
 			submission = praw_thing.submission
 
