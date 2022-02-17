@@ -13,8 +13,9 @@ class KeywordHelper():
 		('ar', 'yan'), ('ausch, witz'),
 		('black', ' people'),
 		('child p', 'orn'), ('chi', 'nk'), ('concentrati', 'on camp'), ('c', 'unt'),
-		('da', 'go'),
+		('da', 'go'), ('de', 'ath'), ('di', 'es'), ('di', 'ed'),
 		('f', 'ag'), ('fuc', 'k off'), ('fuc', 'k you'),
+		('geno', 'cide'),
 		('hit', 'ler'), ('holo', 'caust'),
 		('inc', 'est'), ('israel'),
 		('jew', 'ish'), ('je', 'ws'),
@@ -24,8 +25,9 @@ class KeywordHelper():
 		('nation', 'alist'), ('na', 'zi'), ('nig', 'ga'), ('nig', 'ger'),
 		('pae', 'do'), ('pak', 'i'), ('pale', 'stin'), ('ped', 'o'),
 		('rac' 'ist'), (' r', 'ape'), ('ra', 'ping'), ('ra', 'pist'), ('ret', 'ard'),
-		('sl', 'ut'), ('sp', 'ic'), ('swas', 'tika'),
-		('tra', 'nny'),
+		('self ', 'harm'), ('shoo', 't yourself'), ('st', 'ab')
+		('sl', 'ut'), ('sp', 'ic'), ('sui', 'cide'), ('swas', 'tika'),
+		('terr', 'oris'), ('tra', 'nny'),
 		('white p', 'ower'),
 	]
 
