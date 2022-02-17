@@ -12,9 +12,9 @@ class KeywordHelper():
 	_default_negative_keywords = [
 		('ar', 'yan'), ('ausch, witz'),
 		('black', ' people'),
-		('child p', 'orn'), ('chi', 'nk'), ('concentrati', 'on camp'),
+		('child p', 'orn'), ('chi', 'nk'), ('concentrati', 'on camp'), ('c', 'unt'),
 		('da', 'go'),
-		('fag', 'got'), ('fuc', 'k you'),
+		('f', 'ag'), ('fuc', 'k off'), ('fuc', 'k you'),
 		('hit', 'ler'), ('holo', 'caust'),
 		('inc', 'est'), ('israel'),
 		('jew', 'ish'), ('je', 'ws'),
@@ -23,35 +23,46 @@ class KeywordHelper():
 		('maste', 'r race'), ('mus', 'lim'),
 		('nation', 'alist'), ('na', 'zi'), ('nig', 'ga'), ('nig', 'ger'),
 		('pae', 'do'), ('pak', 'i'), ('pale', 'stin'), ('ped', 'o'),
-		('rac' 'ist'), (' r', 'ape'), ('ra', 'ping'), ('ret', 'ard'),
+		('rac' 'ist'), (' r', 'ape'), ('ra', 'ping'), ('ra', 'pist'), ('ret', 'ard'),
 		('sl', 'ut'), ('sp', 'ic'), ('swas', 'tika'),
 		('tra', 'nny'),
 		('white p', 'ower'),
 	]
 
-	_positive_keywords = []
-	_negative_keywords = ["".join(s) for s in _default_negative_keywords]
-
-	def __init__(self, bot_username=None):
-
-		self._config_section_key = bot_username if bot_username else 'DEFAULT'
+	def __init__(self, config_key='DEFAULT'):
 
 		self._config = ConfigParser()
 		self._config.read('ssi-bot.ini')
 
-		self._positive_keywords += self._config[self._config_section_key].get('positive_keywords', '').lower().split(',')
+		self._positive_keywords = []
+		self._negative_keywords = ["".join(s) for s in self._default_negative_keywords if s]
 
-		# Append user's custom negative keywords
-		self._negative_keywords += self._config[self._config_section_key].get('negative_keywords', '').lower().split(',')
+		# Append bot's custom positive keywords
+		custom_positive_keywords_list = self._config[config_key].get('positive_keywords', '')
+		if custom_positive_keywords_list != '':
+			self._positive_keywords += [kw.strip() for kw in custom_positive_keywords_list.lower().split(',')]
+
+		# Append bot's custom negative keywords
+		custom_negative_keywords_list = self._config[config_key].get('negative_keywords', '')
+		if custom_negative_keywords_list != '':
+			self._negative_keywords += [kw.strip() for kw in custom_negative_keywords_list.lower().split(',')]
+
+		# Loop through each keyword list and test the keyword can be compiled to a regex
+		for l in [self._positive_keywords, self._negative_keywords]:
+			for kw in l:
+				if not self._test_keyword_is_compilable(kw):
+					logging.error(f"Error in keyword {kw}. It will be removed. You may need to add regex escaping to the keyword.")
+					l.remove(kw)
+
+	def _test_keyword_is_compilable(self, kw):
+			try:
+				re.compile("\b{}".format(kw), re.IGNORECASE)
+				return True
+			except re.error:
+				return False
 
 	def positive_keyword_matches(self, text):
 		if self._positive_keywords:
-			regexs = []
-
-			for keyword in self._positive_keywords:
-				logging.info(f'creating regex with keyword {keyword}')
-				regexs.append(r"\b{}".format(keyword))
-
 			return [keyword for keyword in self._positive_keywords if re.search(r"\b{}".format(keyword), text, re.IGNORECASE)]
 		return []
 

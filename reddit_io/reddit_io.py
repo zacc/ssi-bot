@@ -28,6 +28,7 @@ class RedditIO(threading.Thread, LogicMixin):
 	"""
 
 	_praw = None
+	_keyword_helper = None
 
 	_subreddit_flair_id_map = {}
 	_new_submission_schedule = []
