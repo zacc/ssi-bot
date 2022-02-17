@@ -94,6 +94,7 @@ class LogicMixin(TaggingMixin):
 		thing_text_content = ''
 		submission_link_flair_text = ''
 		submission_created_utc = None
+		is_own_comment_reply = False
 
 		if isinstance(praw_thing, praw_Submission):
 			# object is a submission that has title and selftext
@@ -107,6 +108,7 @@ class LogicMixin(TaggingMixin):
 			# navigate to the parent submission to get the link_flair_text
 			submission_link_flair_text = praw_thing.submission.link_flair_text or ''
 			submission_created_utc = datetime.utcfromtimestamp(praw_thing.submission.created_utc)
+			is_own_comment_reply = praw_thing.parent().author == self._praw.user.me().name
 
 		elif isinstance(praw_thing, praw_Message):
 			thing_text_content = praw_thing.body
@@ -160,10 +162,11 @@ class LogicMixin(TaggingMixin):
 			# This is mostly obsoleted by the depth penalty
 			base_probability += self._new_submission_reply_boost
 
-		if any(kw.lower() in thing_text_content.lower() for kw in ['?', ' you', 'what', 'how', 'when', 'why']):
-			# any interrogative terms in the comment,
-			# an increased reply probability
-			base_probability += self._interrogative_reply_boost
+		if isinstance(praw_thing, praw_Submission) or is_own_comment_reply:
+			if any(kw.lower() in thing_text_content.lower() for kw in ['?', ' you', 'what', 'how', 'when', 'why']):
+				# any interrogative terms in the submission or comment text;
+				# results in an increased reply probability
+				base_probability += self._interrogative_reply_boost
 
 		if isinstance(praw_thing, praw_Comment):
 			if praw_thing.parent().author == self._praw.user.me().name:
@@ -171,7 +174,7 @@ class LogicMixin(TaggingMixin):
 				base_probability += self._own_comment_reply_boost
 
 			if praw_thing.submission.author == self._praw.user.me().name:
-				# the submission is by the author, and favor that strongly
+				# the submission is by the bot, and favor that with a boost
 				base_probability += self._own_submission_reply_boost
 
 		# if the bot is mentioned, or its username is in the thing_text_content, reply 100%

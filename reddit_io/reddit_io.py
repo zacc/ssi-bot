@@ -93,11 +93,11 @@ class RedditIO(threading.Thread, LogicMixin):
 		self._base_reply_probability = self._config[self._bot_username].getfloat('base_reply_probability', 0)
 		self._comment_depth_reply_penalty = self._config[self._bot_username].getfloat('comment_depth_reply_penalty', 0.05)
 		self._positive_keyword_reply_boost = self._config[self._bot_username].getfloat('positive_keyword_reply_boost', 0.5)
-		self._bot_author_reply_boost = self._config[self._bot_username].getfloat('bot_author_reply_boost', 0.0)
 		self._human_author_reply_boost = self._config[self._bot_username].getfloat('human_author_reply_boost', 0.3)
+		self._bot_author_reply_boost = self._config[self._bot_username].getfloat('bot_author_reply_boost', 0.0)
 		self._new_submission_reply_boost = self._config[self._bot_username].getfloat('new_submission_reply_boost', 0.1)
-		self._interrogative_reply_boost = self._config[self._bot_username].getfloat('interrogative_reply_boost', 0.3)
-		self._own_comment_reply_boost = self._config[self._bot_username].getfloat('own_comment_reply_boost', 0.4)
+		self._own_comment_reply_boost = self._config[self._bot_username].getfloat('own_comment_reply_boost', 0.3)
+		self._interrogative_reply_boost = self._config[self._bot_username].getfloat('interrogative_reply_boost', 0.4)
 		self._own_submission_reply_boost = self._config[self._bot_username].getfloat('own_submission_reply_boost', 0.5)
 		self._message_mention_reply_probability = self._config[self._bot_username].getfloat('message_mention_reply_probability', 1)
 
@@ -210,7 +210,7 @@ class RedditIO(threading.Thread, LogicMixin):
 				text_generation_parameters = None
 
 				if random.random() < reply_probability:
-					logging.info(f"Configuring a job for {praw_thing.name} with reply probability {reply_probability}%")
+					logging.info(f"Configuring a job for {praw_thing.name} with reply probability {(reply_probability * 100):.2f}%")
 
 					# It will generate a reply, so grab the parameters before we put it into the database
 					text_generation_parameters = self.get_text_generation_parameters(praw_thing)
