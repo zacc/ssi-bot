@@ -105,6 +105,11 @@ class RedditIO(threading.Thread, LogicMixin):
 		# this will automatically pick up the configuration from praw.ini
 		self._praw = praw.Reddit(self._bot_username)
 
+		self._subreddit_helper = self._praw.subreddit('+'.join(self._subreddits))
+		self._submission_stream = self._subreddit_helper.stream.submissions(skip_existing=False, pause_after=0)
+		self._comment_stream = self._subreddit_helper.stream.comments(skip_existing=False, pause_after=0)
+		self._inbox_stream = self._praw.inbox.stream(skip_existing=False, pause_after=0)
+
 	def run(self):
 
 		# synchronize bot's own posts to the database
@@ -191,12 +196,12 @@ class RedditIO(threading.Thread, LogicMixin):
 	def poll_incoming_streams(self):
 
 		# Setup all the streams for new comments and submissions
-		sr = self._praw.subreddit('+'.join(self._subreddits))
-		submissions = sr.stream.submissions(skip_existing=True, pause_after=0)
-		comments = sr.stream.comments(skip_existing=True, pause_after=0)
+		# sr = self._praw.subreddit('+'.join(self._subreddits))
+		# submissions = sr.stream.submissions(skip_existing=True, pause_after=0)
+		# comments = sr.stream.comments(skip_existing=True, pause_after=0)
 
 		# Merge the streams in a single loop to DRY the code
-		for praw_thing in chain_listing_generators(submissions, comments):
+		for praw_thing in chain_listing_generators(self._submission_stream, self._comment_stream):
 
 			# Check in the database to see if it already exists
 			record = self.is_praw_thing_in_database(praw_thing)
