@@ -11,9 +11,9 @@ class KeywordHelper():
 	# Operator should train their model to avoid falling back on this.
 	_default_negative_keywords = [
 		('ar', 'yan'), ('ausch, witz'),
-		('black', ' people'), ('bo', 'mb'),
+		('beh', 'ead'), ('black', ' people'), ('bo', 'mb'),
 		('child p', 'orn'), ('chi', 'nk'), ('concentrati', 'on camp'), ('c', 'unt'),
-		('da', 'go'), ('de', 'ath'), ('di', 'es'), ('di', 'ed'),
+		('da', 'go'), ('de', 'ath'), ('decapi', 'tate'), ('di', 'es'), ('di', 'ed'),
 		('f', 'ag'), ('fuc', 'k off'), ('fuc', 'k you'),
 		('geno', 'cide'),
 		('hit', 'ler'), ('holo', 'caust'),
@@ -25,7 +25,7 @@ class KeywordHelper():
 		('nation', 'alist'), ('na', 'zi'), ('nig', 'ga'), ('nig', 'ger'),
 		('pae', 'do'), ('pak', 'i'), ('pale', 'stin'), ('ped', 'o'),
 		('rac' 'ist'), (' r', 'ape'), ('ra', 'ping'), ('ra', 'pist'), ('ret', 'ard'),
-		('self ', 'harm'), ('shoo', 't yourself'), ('st', 'ab'),
+		('self ', 'harm'), ('shoo', 't you'), ('st', 'ab'),
 		('sl', 'ut'), ('sp', 'ic'), ('sui', 'cide'), ('swas', 'tika'),
 		('terr', 'oris'), ('tra', 'nny'),
 		('white p', 'ower'),
