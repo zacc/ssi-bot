@@ -25,7 +25,7 @@ class KeywordHelper():
 		('nation', 'alist'), ('na', 'zi'), ('nig', 'ga'), ('nig', 'ger'),
 		('pae', 'do'), ('pak', 'i'), ('pale', 'stin'), ('ped', 'o'),
 		('rac' 'ist'), (' r', 'ape'), ('ra', 'ping'), ('ra', 'pist'), ('ret', 'ard'),
-		('self ', 'harm'), ('shoo', 't yourself'), ('st', 'ab')
+		('self ', 'harm'), ('shoo', 't yourself'), ('st', 'ab'),
 		('sl', 'ut'), ('sp', 'ic'), ('sui', 'cide'), ('swas', 'tika'),
 		('terr', 'oris'), ('tra', 'nny'),
 		('white p', 'ower'),

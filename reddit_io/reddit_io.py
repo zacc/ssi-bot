@@ -538,6 +538,8 @@ class RedditIO(threading.Thread, LogicMixin):
 			if submission.locked:
 				logging.error(f'Submission {submission} has been locked.')
 				return True
+		# Assume not deleted
+		return False
 
 	def _find_depth_of_comment(self, praw_comment):
 		"""
