@@ -11,7 +11,7 @@ class KeywordHelper():
 	# Operator should train their model to avoid falling back on this.
 	_default_negative_keywords = [
 		('ar', 'yan'), ('ausch, witz'),
-		('black', ' people'),
+		('black', ' people'), ('bo', 'mb'),
 		('child p', 'orn'), ('chi', 'nk'), ('concentrati', 'on camp'), ('c', 'unt'),
 		('da', 'go'), ('de', 'ath'), ('di', 'es'), ('di', 'ed'),
 		('f', 'ag'), ('fuc', 'k off'), ('fuc', 'k you'),

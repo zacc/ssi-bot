@@ -172,12 +172,15 @@ class RedditIO(threading.Thread, LogicMixin):
 				reply_probability = self.calculate_reply_probability(praw_thing)
 
 				text_generation_parameters = None
+				random_value = random.random()
 
-				if random.random() < reply_probability:
-					logging.info(f"Configuring a job for {praw_thing.name} with reply probability {(reply_probability * 100):.2f}%")
+				if random_value < reply_probability:
+					logging.info(f"random value: {random_value:.3f} < {praw_thing} reply probabililty {(reply_probability):.1f}. Starting a reply..")
 
 					# It will generate a reply, so grab the parameters before we put it into the database
 					text_generation_parameters = self.get_text_generation_parameters(praw_thing)
+				else:
+					logging.info(f"random value: {random_value:.3f} < {praw_thing} reply probabililty {(reply_probability):.1f}. No reply.. :(")
 
 				# insert it into the database
 				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters=text_generation_parameters)
@@ -210,12 +213,15 @@ class RedditIO(threading.Thread, LogicMixin):
 				reply_probability = self.calculate_reply_probability(praw_thing)
 
 				text_generation_parameters = None
+				random_value = random.random()
 
-				if random.random() < reply_probability:
-					logging.info(f"Configuring a job for {praw_thing.name} with reply probability {(reply_probability * 100):.2f}%")
+				if random_value < reply_probability:
+					logging.info(f"random value: {random_value:.3f} < {praw_thing} reply probabililty {(reply_probability):.1f}. Starting a reply..")
 
 					# It will generate a reply, so grab the parameters before we put it into the database
 					text_generation_parameters = self.get_text_generation_parameters(praw_thing)
+				else:
+					logging.info(f"random value: {random_value:.3f} < {praw_thing} reply probabililty {(reply_probability):.1f}. No reply.. :(")
 
 				# insert it into the database
 				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters=text_generation_parameters)
@@ -434,7 +440,6 @@ class RedditIO(threading.Thread, LogicMixin):
 			return f"t3_{praw_thing.id}"
 		if isinstance(praw_thing, praw_Message):
 			return f"t4_{praw_thing.id}"
-
 
 	def insert_praw_thing_into_database(self, praw_thing, text_generation_parameters=None):
 
