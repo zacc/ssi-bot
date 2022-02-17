@@ -174,6 +174,8 @@ class RedditIO(threading.Thread, LogicMixin):
 				text_generation_parameters = None
 
 				if random.random() < reply_probability:
+					logging.info(f"Configuring a job for {praw_thing.name} with reply probability {(reply_probability * 100):.2f}%")
+
 					# It will generate a reply, so grab the parameters before we put it into the database
 					text_generation_parameters = self.get_text_generation_parameters(praw_thing)
 
@@ -306,6 +308,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			# Set the name value of the reply that was posted, to finalize the job
 			post_job.posted_name = reply_praw_thing.name
+			post_job.status = 8
 			post_job.save()
 
 			logging.info(f"Job {post_job.id} reply submitted successfully")
@@ -364,12 +367,13 @@ class RedditIO(threading.Thread, LogicMixin):
 				return
 
 			post_job.posted_name = submission_praw_thing.name
+			post_job.status = 8
 			post_job.save()
 
 			# Put the praw thing into the database so it's registered as a submitted job
 			self.insert_praw_thing_into_database(submission_praw_thing)
 
-			logging.info(f"Job {post_job.id} submission submitted successfully: https://www.reddit.com/{submission_praw_thing.permalink}")
+			logging.info(f"Job {post_job.id} submission submitted successfully: https://www.reddit.com{submission_praw_thing.permalink}")
 
 		except praw.exceptions.RedditAPIException as e:
 			if 'DOMAIN_BANNED' in str(e):

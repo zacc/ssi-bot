@@ -62,14 +62,14 @@ def on_presave_handler(model_class, instance, created):
 	# This handler stores all business logic for how a thing/job status changes
 
 	# 9 = FAILED
-	# 8 = COMPLETE
-	# 7 = SUBMIT_READY
-	# 5 = IMAGE_GEN
-	# 3 = TEXT_GEN
+	# 8 = COMPLETE - NO FURTHER ACTION
+	# 7 = SUBMIT (TO REDDIT) - READY TO START
+	# 5 = IMAGE_GEN - READY TO START
+	# 3 = TEXT_GEN - READY TO START
 	# 1 = NEW
 
 	if instance.status >= 8:
-		# Status might already be set to 8 when the thing has come from the sync
+		# Status might already be set
 		return
 
 	text_gen_attempts_allowed = 3
@@ -84,7 +84,7 @@ def on_presave_handler(model_class, instance, created):
 		# Attempts have been attempted and no content was created so fail the job
 		instance.status = 9
 
-	elif instance.posted_name is not None or instance.text_generation_parameters is None:
+	elif instance.posted_name or instance.text_generation_parameters is None:
 		# If it has a posted_name then it's been posted to reddit and it's complete.
 		# Or if it doesn't have text_generation_parameters at all, set to 8
 		instance.status = 8
