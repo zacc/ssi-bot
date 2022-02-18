@@ -39,16 +39,15 @@ class ImageScraper(threading.Thread, TaggingMixin):
 				try:
 					logging.info(f"Starting to find an image for job_id {job.id}.")
 
-					# Logic mixin extract title
-					title_text = self.extract_title_from_generated_text(job.generated_text)
-					if not title_text:
-						continue
+					if not job.image_generation_parameters['prompt'] and job.generated_text:
+						# If there is no prompt, but is generated text, attempt to extract the title
+						# from the generated text and use it as the prompt
+						job.image_generation_parameters['prompt'] = self.extract_title_from_generated_text(job.generated_text)
 
-					image_url = self._download_image_for_search_string(title_text, job.image_generation_parameters, job.image_generation_attempts)
-
-					print('found image_url', image_url)
+					image_url = self._download_image_for_search_string(job.bot_username, job.image_generation_parameters.copy(), job.image_generation_attempts)
 
 					if image_url:
+						logging.info(f'Using image url for job {job}: {image_url}')
 						job.generated_image_path = image_url
 						job.save()
 
@@ -64,36 +63,40 @@ class ImageScraper(threading.Thread, TaggingMixin):
 
 			# Sleep a bit more to be nice to dem servers
 			time.sleep(120)
-			# Testing
-			# time.sleep(10)
 
-	def _download_image_for_search_string(self, search_string, image_generation_parameters, attempt):
+	def _download_image_for_search_string(self, bot_username, image_generation_parameters, attempt):
 
-		logging.info(f"Searching on Bing for an image for: \"{search_string}\"")
+		logging.info(f"{bot_username} is searching on Bing for an image..")
 
-		# pop the prompt out from the args (default value is that of the image_search_prefix)
+		# pop the prefix out from the parameters
+		search_prefix = image_generation_parameters.pop('image_post_search_prefix', None)
+
+		# Split the search prefix into keywords
+		search_prefix_keywords = search_prefix.split(' ') if search_prefix else []
+
 		prompt = image_generation_parameters.pop('prompt', None)
+		prompt_keywords = []
 
-		# Split the prompt into keywords, or just an empty array
-		search_keywords = prompt.split(' ') if prompt else []
+		if prompt:
+			first_sentence = sent_tokenize(prompt)[0]
 
-		first_sentence = sent_tokenize(search_string)[0]
+			# remove numbers and tokenize the text
+			tokenized = TweetTokenizer().tokenize(first_sentence.translate({ord(ch): None for ch in '0123456789'}))
+			# remove single letter tokens
+			tokenized = [i for i in tokenized if len(i) > 1]
+			# remove duplicates from the token list
+			tokenized = list(OrderedDict.fromkeys(tokenized))
 
-		# remove numbers and tokenize the text
-		tokenized = TweetTokenizer().tokenize(first_sentence.translate({ord(ch): None for ch in '0123456789'}))
-		# remove single letter tokens
-		tokenized = [i for i in tokenized if len(i) > 1]
-		# remove duplicates from the token list
-		tokenized = list(OrderedDict.fromkeys(tokenized))
+			# put nltk tags on it
+			pos_tagged_text = nltk.pos_tag(tokenized)
 
-		# put nltk tags on it
-		pos_tagged_text = nltk.pos_tag(tokenized)
+			# Extract all nouns, verbs and adverbs and append to the existing
+			prompt_keywords = [i[0] for i in pos_tagged_text if i[1][:2] in ['NN', 'VB', 'RB']]
 
-		# Extract all nouns, verbs and adverbs and append to the existing
-		search_keywords.extend([i[0] for i in pos_tagged_text if i[1][:2] in ['NN', 'VB', 'RB']])
+		# Merge the prefix keywords and prompt keywords, to a maximum of 10.
+		search_keywords = search_prefix_keywords + prompt_keywords[:(10 - len(search_prefix_keywords))]
 
-		# Truncate to 10 keywords to improve effectiveness of the search
-		search_keywords = search_keywords[:10]
+		# Convert all of the keywords back into a single string
 		search_keywords_as_string = ' '.join(search_keywords)
 
 		# Collect and encode all search url parameters

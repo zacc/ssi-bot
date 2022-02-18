@@ -499,7 +499,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		if new_submission_tag.startswith('<|sols'):
 			print('its a link submission')
 			image_generation_parameters = self._default_image_generation_parameters.copy()
-			image_generation_parameters['prompt'] = self._image_post_search_prefix
+			image_generation_parameters['image_post_search_prefix'] = self._image_post_search_prefix
 			new_submission_thing['image_generation_parameters'] = image_generation_parameters
 
 		return db_Thing.create(**new_submission_thing)
