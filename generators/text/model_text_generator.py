@@ -16,6 +16,7 @@ from reddit_io.tagging_mixin import TaggingMixin
 from bot_db.db import Thing as db_Thing
 
 from utils.keyword_helper import KeywordHelper
+from utils.memory import get_available_memory
 
 ROOT_DIR = Path(__file__).parent.parent.parent
 
@@ -25,7 +26,16 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 	daemon = True
 	name = "MTGThread"
 
+	# GPU is not really required for text generation
+	# So the default is False
+	_use_gpu = False
+
 	_config = None
+
+	# The amount of memory required to start generation, in KB
+	# This is the default for GPT-2 Small (117M parameters)
+	# This will need to be increased for larger GPT-2 models
+	_memory_required = 1400000
 
 	def __init__(self):
 		threading.Thread.__init__(self)
@@ -41,6 +51,18 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 		while True:
 
 			jobs = self.top_pending_jobs()
+
+			if not jobs:
+				# there are no jobs at all in the queue
+				# Rest a little before attempting again
+				time.sleep(30)
+				continue
+
+			if get_available_memory(self._use_gpu) < self._memory_required:
+				# Not enough memory.. Sleep and start again
+				logging.info('Insufficient memory to generate text')
+				time.sleep(30)
+				continue
 
 			for job in jobs:
 
@@ -79,11 +101,6 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 					job.text_generation_attempts += 1
 					job.save()
 
-			if not jobs:
-				# there are no jobs at all in the queue
-				# Rest a little before attempting again
-				time.sleep(30)
-
 	def generate_text(self, bot_username, text_generation_parameters):
 
 		model_path = ROOT_DIR / self._config[bot_username]['text_model_path']
@@ -91,7 +108,7 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 		# if you are generating on CPU, keep use_cuda and fp16 both false.
 		# If you have a nvidia GPU you may enable these features
 		# TODO shift these parameters into the ssi-bot.ini file
-		model = LanguageGenerationModel("gpt2", model_path, use_cuda=False, args={'fp16': False})
+		model = LanguageGenerationModel("gpt2", model_path, use_cuda=self._use_gpu, args={'fp16': False})
 
 		start_time = time.time()
 
@@ -112,7 +129,6 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 
 		if output_list:
 			return ftfy.fix_text(codecs.decode(output_list[0], "unicode_escape"))
-			# return output_list[0]
 
 	def top_pending_jobs(self):
 		"""
