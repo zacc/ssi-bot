@@ -156,7 +156,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 	def poll_inbox_stream(self):
 
-		for praw_thing in self._praw.inbox.stream(pause_after=0):
+		for praw_thing in self._inbox_stream:
 
 			if praw_thing is None:
 				break
@@ -180,12 +180,12 @@ class RedditIO(threading.Thread, LogicMixin):
 				random_value = random.random()
 
 				if random_value < reply_probability:
-					logging.info(f"random value: {random_value:.3f} < {praw_thing} reply probabililty {(reply_probability):.1f}. Starting a reply..")
+					logging.info(f"{praw_thing} Random value {random_value:.3f} < Reply probabililty {(reply_probability):.1f}. Starting a reply..")
 
 					# It will generate a reply, so grab the parameters before we put it into the database
 					text_generation_parameters = self.get_text_generation_parameters(praw_thing)
 				else:
-					logging.info(f"random value: {random_value:.3f} < {praw_thing} reply probabililty {(reply_probability):.1f}. No reply.. :(")
+					logging.info(f"{praw_thing} Random value {random_value:.3f} < Reply probabililty {(reply_probability):.1f}. No reply.. :(")
 
 				# insert it into the database
 				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters=text_generation_parameters)
@@ -194,11 +194,6 @@ class RedditIO(threading.Thread, LogicMixin):
 			praw_thing.mark_read()
 
 	def poll_incoming_streams(self):
-
-		# Setup all the streams for new comments and submissions
-		# sr = self._praw.subreddit('+'.join(self._subreddits))
-		# submissions = sr.stream.submissions(skip_existing=True, pause_after=0)
-		# comments = sr.stream.comments(skip_existing=True, pause_after=0)
 
 		# Merge the streams in a single loop to DRY the code
 		for praw_thing in chain_listing_generators(self._submission_stream, self._comment_stream):
@@ -221,12 +216,12 @@ class RedditIO(threading.Thread, LogicMixin):
 				random_value = random.random()
 
 				if random_value < reply_probability:
-					logging.info(f"random value: {random_value:.3f} < {praw_thing} reply probabililty {(reply_probability):.1f}. Starting a reply..")
+					logging.info(f"{praw_thing} Random value {random_value:.3f} < Reply probabililty {(reply_probability):.1f}. Starting a reply..")
 
 					# It will generate a reply, so grab the parameters before we put it into the database
 					text_generation_parameters = self.get_text_generation_parameters(praw_thing)
 				else:
-					logging.info(f"random value: {random_value:.3f} < {praw_thing} reply probabililty {(reply_probability):.1f}. No reply.. :(")
+					logging.info(f"{praw_thing} Random value {random_value:.3f} < Reply probabililty {(reply_probability):.1f}. No reply.. :(")
 
 				# insert it into the database
 				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters=text_generation_parameters)
