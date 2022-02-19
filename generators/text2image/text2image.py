@@ -4,8 +4,11 @@ import logging
 import os
 import psutil
 import subprocess
+import sys
 import threading
 import time
+
+import ftfy
 import torch
 
 from configparser import ConfigParser
@@ -80,28 +83,27 @@ class Text2Image(threading.Thread, TaggingMixin):
 	def generate_image(self, bot_username, image_generation_parameters):
 
 		vqgan_path = ROOT_DIR / self._config[bot_username]['vqgan-clip_path']
-		print('vqgan path', vqgan_path)
-
 		filename = f"{bot_username}_vqgan_output_{int(time.time())}.png"
 		filepath = ROOT_DIR / "generated_images" / filename
-		print('filename/path', filename, filepath)
 
 		start_time = time.time()
 
+		# pop the prompt out from the args
+		prompt = image_generation_parameters.pop('prompt', '')
 		x = image_generation_parameters.pop('x_size', 256)
 		y = image_generation_parameters.pop('y_size', 256)
 		iterations = image_generation_parameters.pop('iterations', 500)
 
-		# pop the prompt out from the args
-		prompt = image_generation_parameters.pop('prompt', '')
-		print('vqgan prompt', prompt)
-
 		cmd_change_directory = f"cd {vqgan_path}"
-		print(cmd_change_directory)
 		cmd_generate = f"python {vqgan_path}/generate.py -p '{prompt}' -s {x} {y} -o {filepath} -i {iterations}"
-		print(cmd_generate)
 
-		p = subprocess.run(f"{cmd_change_directory} ; {cmd_generate}", shell=True, capture_output=True)
+		p = subprocess.Popen(f"{cmd_change_directory} ; {cmd_generate}", shell=True, text=True,
+			stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+		for line in p.stdout:
+			# Stream the output from the subprocess into the logging
+			# Convert bytes to a string
+			logging.info(ftfy.fix_text(line))
+		p.wait()
 
 		end_time = time.time()
 		duration = round(end_time - start_time, 1)
