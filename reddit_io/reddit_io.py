@@ -232,7 +232,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		comment_history = self._collate_tagged_comment_history(praw_thing, use_reply_sense=self._use_reply_sense)
 		# Remove any bot mentions from the text because of the bot's fragile sense of self
 		cleaned_history = self.remove_username_mentions_from_string(comment_history, self._bot_username)
-		reply_start_tag = self._get_reply_tag(praw_thing)
+		reply_start_tag = self.get_reply_tag(praw_thing, self._bot_username, use_reply_sense=self._use_reply_sense)
 
 		prompt = cleaned_history + reply_start_tag
 

@@ -144,6 +144,42 @@ class TestCommentTagging():
 		assert output == "<|soocr u/Showerthoughts_SSI|>You're not allowed to post here.<|eoocr|>"
 
 
+class TestReplyTag():
+	@pytest.fixture(autouse=True)
+	def submission(self):
+		fh = open('tests/pickles/submission_selftext.pkl', 'rb')
+		submission = pickle.load(fh)
+		yield submission
+
+	def _get_comment_by_id(self, comment_forest, comment_id):
+		# Flatten the CommentForest into a single list, then find the comment
+		flat_list = list(itertools.chain(comment_forest.list()))
+		for c in flat_list:
+			if c.id == comment_id:
+				return c
+
+	def test_standard_reply_tag(self, submission):
+		comment = self._get_comment_by_id(submission.comments, 'hvjg19q')
+		assert comment
+		tagging = TaggingMixin()
+		output = tagging.get_reply_tag(comment, "AgentGiga", use_reply_sense=True)
+		assert output == "<|sor|>"
+
+	def test_own_comment_reply_tag(self, submission):
+		comment = self._get_comment_by_id(submission.comments, 'hvjhgm2')
+		assert comment
+		tagging = TaggingMixin()
+		output = tagging.get_reply_tag(comment, "SirLadthe1st", use_reply_sense=True)
+		assert output == "<|soocr|>"
+
+	def test_own_submission_reply_tag(self, submission):
+		comment = self._get_comment_by_id(submission.comments, 'hvjfqwe')
+		assert comment
+		tagging = TaggingMixin()
+		output = tagging.get_reply_tag(comment, "Salouva", use_reply_sense=True)
+		assert output == "<|soopr|>"
+
+
 class TestMessageTagging():
 	@pytest.fixture(autouse=True)
 	def message(self):

@@ -21,13 +21,23 @@ class TaggingMixin():
 
 	_end_tag = '<|'
 
-	def _get_reply_tag(self, praw_thing):
+	def get_reply_tag(self, praw_thing, bot_username, use_reply_sense):
 		"""
 		Get the reply tag to use.
 		The model will generate text after this reply tag.
 
 		*This section is customisable for your own bot and how it has been finetuned*
 		"""
+		if use_reply_sense:
+			# if isinstance(praw_thing, praw_Comment):
+			if praw_thing.submission:
+				# The submission was by the bot so use special tag
+				if praw_thing.submission.author.name.lower() == bot_username.lower():
+					return '<|soopr|>'
+			if praw_thing.parent():
+				# if the parent's parent was by the author bot, use the own content tag
+				if praw_thing.parent().author.name.lower() == bot_username.lower():
+					return '<|soocr|>'
 
 		# It's just a straight reply
 		return self._reply_start_tag
