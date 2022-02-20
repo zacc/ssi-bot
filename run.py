@@ -1,36 +1,42 @@
 import logging
 import time
-import praw
+from configparser import ConfigParser
 
-from model_text_generator import ModelTextGenerator
+from generators.text import ModelTextGenerator
+from generators.scraper import ImageScraper
 from reddit_io import RedditIO
 
-from db import create_db_tables
+from bot_db.db import create_db_tables
 
 
 def main():
 
-	_praw = praw.Reddit(config_interpolation="basic")
-
 	# enable minimal logging with a custom format showing the bot's username
-	NEW_LOG_FORMAT = f"[{_praw.user.me().name}] " + logging.BASIC_FORMAT
+	NEW_LOG_FORMAT = '%(asctime)s (%(threadName)s) %(levelname)s %(message)s'
 	logging.basicConfig(format=NEW_LOG_FORMAT, level=logging.INFO)
 
 	# Create the database. If the table already exists, nothing will happen
 	create_db_tables()
 
-	# initialise reddit_io
-	reddit_io = RedditIO()
-	# synchronize bot's own posts to the databse
-	reddit_io.synchronize_bots_comments_submissions()
+	bot_config = ConfigParser()
+	bot_config.read('ssi-bot.ini')
 
-	# Start the reddit IO daemon which will pick up incoming
-	# submissions/comments and send outgoing ones
-	reddit_io.start()
+	for bot in bot_config.sections():
+
+		# initialise reddit_io
+		bot_io = RedditIO(bot_username=bot)
+
+		# Start the reddit IO daemon which will pick up incoming
+		# submissions/comments and send outgoing ones
+		bot_io.start()
 
 	# Start the text generation daemon
 	mtg = ModelTextGenerator()
 	mtg.start()
+
+	# Start the image scraper daemon
+	imgscr = ImageScraper()
+	imgscr.start()
 
 	# Set up a game loop
 	# Cancel it with Ctrl-C

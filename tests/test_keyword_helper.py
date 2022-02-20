@@ -1,7 +1,7 @@
 
 import pytest
 
-from keyword_helper import KeywordHelper
+from utils.keyword_helper import KeywordHelper
 
 
 class TestKeywordHelper():

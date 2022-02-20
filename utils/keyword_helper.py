@@ -28,16 +28,17 @@ class KeywordHelper():
 	_positive_keywords = []
 	_negative_keywords = ["".join(s) for s in _default_negative_keywords]
 
-	def __init__(self):
+	def __init__(self, bot_username=None):
+
+		self._config_section_key = bot_username if bot_username else 'DEFAULT'
 
 		self._config = ConfigParser()
 		self._config.read('ssi-bot.ini')
 
-		if self._config['DEFAULT']['positive_keywords']:
-			self._positive_keywords = self._config['DEFAULT']['positive_keywords'].lower().split(',')
-		if self._config['DEFAULT']['negative_keywords']:
-			# Append user's custom negative keywords
-			self._negative_keywords += self._config['DEFAULT']['negative_keywords'].lower().split(',')
+		self._positive_keywords += self._config[self._config_section_key].get('positive_keywords', '').lower().split(',')
+
+		# Append user's custom negative keywords
+		self._negative_keywords += self._config[self._config_section_key].get('negative_keywords', '').lower().split(',')
 
 	def positive_keyword_matches(self, text):
 		if self._positive_keywords:
