@@ -1,30 +1,72 @@
-#!/usr/bin/env python3
+import re
+import json
 import random
+import ftfy
+
+from configparser import ConfigParser
+
+from functools import reduce
+import operator
 
 from datetime import datetime
 
 from peewee import fn
-
-from configparser import ConfigParser
+from peewee import Expression
 
 from db import (Comment as db_Comment, Submission as db_Submission)
 
 import concurrent.futures
 
+import sys
+# Hack to allow us to import the negative_keywords list
+sys.path.append("..")
+
+random.seed()
+
 config = ConfigParser()
 config.read('dataset.ini')
 
-# a list of common bots to ignore the comments of. They will pollute the training data with junk.
-# unless you want that, of course..
-author_blacklist = ['automoderator', 'nfl_mod', 'totesmessenger', 'haikubot-1911', 'gfy_mirror', 'should_have_listened',
-	'nice-scores', 'repliesnice', 'redditstreamable', 'twittertostreamable', 'streamablemirrors', 'originalpostsearcher',
-	'b0trank', 'vredditdownloader', 'tweetposter', 'link-reply-bot', 'clickablelinkbot', 'i-am-dad-bot', 'GitHubPermalinkBot',
-	'Freedom_Unit_Bot', 'LearnProgramming_Bot', 'CodeFormatHelperBot']
+# a list of common bots to ignore.
+author_list = [
+	'AmputatorBot', 'analyzeHistory', 'anti-gif-bot', 'AnimalFactsBot', 'automoderator', 'autotldr', 'auto-xkcd37', 'autourbanbot', 'AyyLmao2DongerBot-v2',
+	'backtickbot', 'BadDadBot', 'BaseballBot', 'b0trank', 'Bot_Metric',
+	'CakeDay--Bot', 'checks_out_bot', 'ClickableLinkBot', 'CodeFormatHelperBot', 'CoolDownBot', 'CommonMisspellingBot', 'converter-bot', 'could-of-bot',
+	'DailMail_Bot', '[deleted]',
+	'EmojifierBot', 'enzo32ferrari', 'exponant',
+	'fast-parenthesis-bot', 'FatFingerHelperBot', 'FlairHelperBot', 'Freedom_Unit_Bot', 'friendly-bot', 'fukramosbot',
+	'GenderNeutralBot', 'gfy_mirror', 'gifv-bot', 'GitCommandBot', 'GitHubPermalinkBot', 'Gyazo_Bot', 'GoodBot_BadBot',
+	'haikubot-1911', 'haikusbot', 'HelperBot_', 'highlightsbot', 'HuachiBot',
+	'IamYodaBot', 'i-am-dad-bot', 'imguralbumbot', 'ImJimmieJohnsonBot', 'Its_URUGUAY_bot', 'JobsHelperBot', 'JustAHooker', 'kmcc93',
+	'LinkFixerBot', 'LinkifyBot', 'link-reply-bot', 'LearnProgramming_Bot', 'LimbRetrieval-Bot', 'LinkExpanderBot',
+	'MAGIC_EYE_BOT', 'MaxImageBot', 'Mentioned_Videos', 'metric_units', 'MLBVideoConverterBot', 'ModeratelyHelpfulBot', 'morejpeg_auto',
+	'NASCARThreadBot', 'NBA_MOD', 'NFL_Warning', 'NFLVideoConverterBot', 'nice-scores', 'NicolasBotCage', 'Not_RepostSleuthBot',
+	'of_have_bot', 'ootpbot', 'originalpostsearcher', 'oofed-bot',
+	'parenthesis-bot', 'PicDescriptionBot', 'phonebatterylevelbot', 'PORTMANTEAU-BOT', 'ProgrammerHumorMods', 'BeginnerProjectBot', 'pythonHelperBot',
+	'reddit-blackjack-bot', 'Reddit-Book-Bot', 'redditstreamable', 'relevant_post_bot', 'remindmebot', 'repliesnice',
+	'RepostSleuthBot', 'RepostCheckerBot', 'ReverseCaptioningBot', 'roastbot', 'RoastBotTenThousand',
+	'sexy-snickers', 'should_have_listened', 'Simultate_Me_Bot', 'SmallSubBot', 'SnapshillBot', 'sneakpeekbot',
+	'Spam_Detector_Bot', 'Shakespeare-Bot', 'SpellCheck_Privilege', 'StreamableReddit', 'streamablemirrors', 'sub_doesnt_exist_bot', 'SwagmasterEDP',
+	'table_it_bot', 'thank_mr_skeltal_bot', 'Thatonefriendlybot', 'THE_GREAT_SHAZBOT', 'TheDroidNextDoor', 'timezone_bot', 'Title2ImageBot', 'TitleToImageBot', 'totesmessenger',
+	'twittertostreamable', 'tweetposter', 'TweetsInCommentsBot', 'tweettranscriberbot', 'twitterInfo_bot', 'TwitterVideoBot',
+	'User_Simulator',
+	'vredditdownloader', 'video_descriptionbot',
+	'WaterIsWetBot', 'WellWishesBot', 'WikiTextBot', 'WikiSummarizerBot',
+	'xkcd-Hyphen-bot', 'xkcd_transcriber',
+	'YoMammaJokebot', 'youtubefactsbot', 'YTubeInfoBot'
+	]
 
-# A list of bad words. If these words are in the reddit comment, ignore that comment
-# A good way to get the bot to behave nicely is to finetune it on healthy content in the first place
-# There is usually always enough training data to comfortably filter out junk content like this
-negative_keywords = []
+lowercase_author_list = [a.lower() for a in author_list]
+
+from utils.keyword_helper import KeywordHelper
+# import the default negative keywords
+kw_helper = KeywordHelper()
+default_negative_keywords = kw_helper._negative_keywords
+
+if config['DEFAULT']['negative_keywords']:
+	# import config negative keywords
+	config_negative_keywords = config['DEFAULT']['negative_keywords'].split(',')
+
+lowercase_neg_kw_list = [a.lower().strip() for a in default_negative_keywords + config_negative_keywords]
 
 # The name of the subreddits trained from
 training_subreddits = []
@@ -32,141 +74,195 @@ training_subreddits = []
 # Pull configs from dataset.ini
 if config['DEFAULT']['training_subreddits']:
 	training_subreddits = config['DEFAULT']['training_subreddits'].split(',')
-if config['DEFAULT']['negative_keywords']:
-	negative_keywords = config['DEFAULT']['negative_keywords'].split(',')
 
-# Keywords to be stripped from the dataset output
-text_removed = ['[removed]', '[deleted]']
+
+def tag_submission(sub):
+
+	if sub.is_self:
+		# is_self parameter means it is a selftext submission with code
+		return f"<|soss r/{sub.subreddit}|><|sot|>{sub.title}<|sost|>{repr(sub.selftext)[1:-1]}"
+	else:
+		# if there's no selftext then it's just a linkpost.
+		return f"<|sols r/{sub.subreddit}|><|sot|>{sub.title}<|sol|>"
+
+
+def end_tag_for_submission(sub):
+	if sub.is_self:
+		return f"<|eoss|>"
+	else:
+		return f"<|eols|>"
+
+
+def tag_comment(comment, include_author):
+
+	author_string = ""
+	parent_parent = get_parent_parent(comment)
+	tag = "r"
+
+	if comment.submission().author == comment.author:
+		# the tag changes if it's the op replying
+		tag = "opr"
+	elif parent_parent:
+		if parent_parent.author == comment.author:
+			# the tag used changes if 2 posts were before was also the same author
+			tag = f"ocr"
+
+	if include_author:
+		author_string = f" u/{comment.author}"
+
+	return f"<|so{tag}{author_string}|>{repr(comment.body)[1:-1]}"
+
+
+def get_parent_parent(db_object):
+
+	try:
+		return db_object.parent().parent()
+	except Exception as e:
+		return None
 
 
 def gather_comments_for_submission(sub):
 
-	if any(s in sub.selftext for s in negative_keywords):
-		# if the submission contains a negative keyword, 
-		# ignore it so we don't train the bot on bad stuff
-		print(f"{sub.id} contains negative keywords")
-		return
+	submission_author = sub.author
+	parent = sub
 
-	if any(s in sub.selftext for s in text_removed):
-		# if the post has been edited or deleted it might contain [removed] or [deleted]
-		# if it does, ignore this submission because we can't train on that
-		print(f"blacklist selftext: {sub.selftext}")
-		return
+	db_object_output_list = [sub]
 
-	if sub.author.lower() in author_blacklist:
-		print(f"author blacklist {sub.author}")
-		return
+	exclude_comment_negative_keywords = reduce(operator.and_, [~fn.Lower(db_Comment.body).regexp(r"\b{}".format(s)) for s in lowercase_neg_kw_list])
 
-	# pick out all of the comments in this submission(topic)
-	# is_url_only omits comments that are only a url, which look poor in the generated text
-	top_rated_comments = list(db_Comment.select().where((db_Comment.link_id == f't3_{sub.id}') &
-		(fn.Lower(db_Comment.author.not_in(author_blacklist))) & (~db_Comment.is_url_only)))
-
-	for tr_comment in top_rated_comments:
-		# Here, we will start to create a string representation of the reddit submission, with all comments in a thread
-		# in chronological order
-
-		print(f"starting top rated comments loop {sub.id}")
-
-		# this is the end of the training string.. all text will be prepended to this
-		if tr_comment.submission().is_self:
-			# is_self parameter means it is a selftext submission
-			text_gen_string = "<|eoss|>"
+	for i in range(0, 10):
+		if isinstance(parent, db_Submission):
+			parent_id = f't3_{parent.id}'
 		else:
-			# Otherwise it is a link submission (ie just a title and URL)
-			text_gen_string = "<|eols|>"
+			parent_id = f't1_{parent.id}'
 
-		ancestor = tr_comment
-		comments_counted = 0
+		# Base comment query which filters all comments by parent_id
+		base_comment_query = db_Comment.select().where(
+				(db_Comment.parent_id == parent_id) &
+				(db_Comment.is_url_only == False) &
+				(exclude_comment_negative_keywords) &
+				(fn.Lower(db_Comment.author).not_in(lowercase_author_list)))
 
-		# From the top rated comment, we'll loop back up the comment thread until
-		# we reach the submission
-		# Then we have the submission text and comment text all in the correct reply
-		# order that represents how humans have a conversation
-		while ancestor is not None:
+		if i == 0:
+			# Prevent comments where the author themselves posts a top-level comment
+			base_comment_query = base_comment_query.where(db_Comment.author != submission_author)
 
-			if (ancestor.author.lower() in author_blacklist or
-				ancestor.author.lower().endswith('bot')):
-				# is probably a bot account, break the loop
-				break
+		# Score filter is unreliable. 
+		top_children = list(base_comment_query.order_by(db_Comment.score.desc()))
 
-			if isinstance(ancestor, db_Comment):
-				if any(s in ancestor.body for s in text_removed):
-					print("blacklist text... breaking")
-					break
+		# Alternative top children query to filter by length of the comment
+		# top_children = list(base_comment_query.order_by(fn.Length(db_Comment.body).desc()))
 
-				record_string = f"<|sor|>{ancestor.body}<|eor|>"
+		# Alternative top children query to filter by newest comments
+		# top_children = list(base_comment_query.order_by(db_Comment.created_utc.desc()))
 
-				# build the text_gen_string up backwards
-				text_gen_string = record_string + text_gen_string
-				comments_counted += 1
+		for child_comment in top_children:
+			parent_parent = get_parent_parent(child_comment)
 
-			elif isinstance(ancestor, db_Submission):
+			# Check that this record's parent text is not identical, because we would prefer variation.
+			# Skip ahead to the next comment
+			if type(parent) == db_Comment and parent.body.lower() == child_comment.body.lower():
+				continue
+			if type(parent_parent) == db_Comment and parent_parent.body.lower() == child_comment.body.lower():
+				continue
 
-				if ancestor.is_self:
-					# is_self parameter means it is a selftext submission
-					record_string = f"<|soss|><|sot|>{ancestor.title}<|eot|><|sost|>{ancestor.selftext}<|eost|>"
-				else:
-				# if there's no selftext then it's just a linkpost.
-					record_string = f"<|sols|><|sot|>{ancestor.title}<|eot|><|sol|><|eol|>"
+			db_object_output_list.append(child_comment)
+			parent = child_comment
+			break
 
-				text_gen_string = record_string + text_gen_string
-				break
+		else:
+			break
 
-			# get the next comment up in the thread and compile the text for that, too.
-			ancestor = ancestor.parent()
+	output_string = ""
+	end_tag = ""
 
-		if text_gen_string.startswith("<|sols") or text_gen_string.startswith('<|soss') and comments_counted > 0:
-			# sols/soss is in the thread so we reached the submission and counted at least one comment
-			# that's sufficient to add into the training output data.
-			return text_gen_string
+	for i, obj in enumerate(db_object_output_list):
+
+		if isinstance(obj, db_Submission):
+
+			output_string += tag_submission(obj)
+			end_tag = end_tag_for_submission(obj)
+
+		elif isinstance(obj, db_Comment):
+			# For the last comment, do not include the author's name
+			# So include_author will be False
+			include_author = i < len(db_object_output_list) - 1
+			output_string += tag_comment(obj, include_author)
+
+	return output_string + end_tag + "<|endoftext|>"
 
 
 def main():
 
-	random.seed()
-
-	bot_name = "training_output"
+	# Check all of the negative keywords can be converted to regex
+	for kw in lowercase_neg_kw_list:
+		if not kw_helper._test_keyword_is_compilable(kw):
+			print(f"Error in negative keyword {kw}, it cannot be converted to regex. You may need to use regex escaping.")
+			return
 
 	all_submissions = []
-	# all submissions ordered by date
-	all_submissions = list(db_Submission.select().
-		where((fn.Lower(db_Submission.subreddit).in_([s.lower() for s in training_subreddits])) &
-				(fn.Lower(db_Submission.author).not_in([a.lower() for a in author_blacklist]))))
 
-	# We'll shuffle all the submission records and split them into a training and evaluation
-	# lists in a 90/10 ratio. simpletransformers will use the evaluation to test the accuracy
-	# of the training
+	exclude_title_negative_keywords = reduce(operator.and_, [~fn.Lower(db_Submission.title).regexp(r"\b{}".format(s)) for s in lowercase_neg_kw_list])
+	exclude_selftext_negative_keywords = reduce(operator.and_, [~fn.Lower(db_Submission.selftext).regexp(r"\b{}".format(s)) for s in lowercase_neg_kw_list])
+
+	link_submissions = list(db_Submission.select()
+		.where((fn.Lower(db_Submission.subreddit).in_(training_subreddits)) &
+				(db_Submission.is_self == False) &
+				(exclude_title_negative_keywords) &
+				(fn.Lower(db_Submission.author).not_in(lowercase_author_list))))
+
+	selftext_submissions = list(db_Submission.select()
+		.where((fn.Lower(db_Submission.subreddit).in_(training_subreddits)) &
+				(db_Submission.selftext) &
+				(exclude_title_negative_keywords) &
+				(fn.Lower(db_Submission.author).not_in(lowercase_author_list))))
+
+	all_submissions = link_submissions + selftext_submissions
+
+	# file strings for output
+	date_string = datetime.today().strftime('%d%m%y%H%M')
+	# global filename
+	filename = f'training_output_{date_string}'
+
+	# Random sort all of the submissions so we get a mix of types in the 
+	# training and evaluation files.
 	random.shuffle(all_submissions)
+	all_submissions = all_submissions
 
-	split_point = int(len(all_submissions) * 0.9)
-	training_submissions = all_submissions[:split_point]
-	eval_submissions = all_submissions[split_point:]
+	split_point = min(int(len(all_submissions) * 0.10), 3000)
 
-	print(f'{len(training_submissions)} training submissions, {len(eval_submissions)} evaluation submissions')
+	eval_submissions = all_submissions[:split_point]
+	train_submissions = all_submissions[split_point:]
 
-	# file name for the output text file
-	date_string = datetime.today().strftime('%d%m%y_%H%M')
-	counter = 0
+	print("Training submissions", len(train_submissions), "Eval submissions", len(eval_submissions))
 
-	# use concurrent futures (multiprocessing) to speed up the output
-	with concurrent.futures.ProcessPoolExecutor() as executor:
-		filename = f'{bot_name}_{date_string}_training.txt'
+	# use multiprocessing to speed up the output
+	with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
 
-		with open(filename, 'a', encoding='utf-8') as fd:
-			for sub, output_text_gen_string in zip(training_submissions, executor.map(gather_comments_for_submission, training_submissions)):
+		counter = 0
+		string_counter = 0
+
+		with open(f'{filename}_train.txt', 'a', encoding='utf-8') as fd:
+			for return_val, text_gen_string in zip(train_submissions, executor.map(gather_comments_for_submission, train_submissions)):
+				print(return_val)
 				counter += 1
-				if output_text_gen_string:
-					fd.write(f'{output_text_gen_string}' + '<|endoftext|>\n')
-				print(f'subs counted: {counter}. {round(counter/len(all_submissions), 2)}')
+				if text_gen_string:
+					fd.write(text_gen_string + '\n')
+					string_counter += 1
 
-		filename = f'{bot_name}_{date_string}_eval.txt'
-		with open(filename, 'a', encoding='utf-8') as fd:
-			for sub, output_text_gen_string in zip(eval_submissions, executor.map(gather_comments_for_submission, eval_submissions)):
+				print(f'Training {return_val.id} subs counted: {counter}. strings output: {string_counter} {round(string_counter/counter, 2)}, completion: {round(counter/len(train_submissions), 2)}')
+
+		counter = 0
+		string_counter = 0
+
+		with open(f'{filename}_eval.txt', 'a', encoding='utf-8') as fd:
+			for return_val, text_gen_string in zip(eval_submissions, executor.map(gather_comments_for_submission, eval_submissions)):
 				counter += 1
-				if output_text_gen_string:
-					fd.write(f'{output_text_gen_string}' + '<|endoftext|>\n')
-				print(f'subs counted: {counter}. {round(counter/len(all_submissions), 2)}')
+				if text_gen_string:
+					fd.write(text_gen_string + '\n')
+					string_counter += 1
+
+				print(f'Eval {return_val.id} subs counted: {counter}. strings output: {string_counter} {round(string_counter/counter, 2)}, completion: {round(counter/len(eval_submissions), 2)}')
 
 
 if __name__ == '__main__':

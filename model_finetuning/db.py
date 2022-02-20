@@ -5,9 +5,10 @@ import os
 import time
 
 from peewee import *
+from playhouse.sqlite_ext import SqliteExtDatabase
 
 db_file_path = os.path.join('pushshift.sqlite3')
-db_instance = SqliteDatabase(db_file_path, thread_safe=True, pragmas={'journal_mode': 'wal2', 'foreign_keys': 0})
+db_instance = SqliteExtDatabase(db_file_path, thread_safe=True, pragmas={'journal_mode': 'wal2', 'foreign_keys': 0}, regexp_function=True)
 
 
 class Submission(Model):
