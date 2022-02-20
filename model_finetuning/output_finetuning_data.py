@@ -217,7 +217,9 @@ def main():
 				(exclude_title_negative_keywords) &
 				(fn.Lower(db_Submission.author).not_in(lowercase_author_list))))
 
-	all_submissions = link_submissions + selftext_submissions
+	for s in link_submissions + selftext_submissions:
+		if len(s.title.split(' ')) >= 6:
+			all_submissions.append(s)
 
 	# file strings for output
 	date_string = datetime.today().strftime('%d%m%y%H%M')
