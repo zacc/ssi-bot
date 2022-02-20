@@ -18,8 +18,7 @@ from reddit_io.tagging_mixin import TaggingMixin
 
 from bot_db.db import Thing as db_Thing
 from utils.memory import get_available_memory
-
-ROOT_DIR = Path(__file__).parent.parent.parent
+from utils import ROOT_DIR
 
 
 class Text2Image(threading.Thread, TaggingMixin):

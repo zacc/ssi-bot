@@ -3,6 +3,8 @@ import re
 
 from configparser import ConfigParser
 
+from utils import ROOT_DIR
+
 
 class KeywordHelper():
 
@@ -13,7 +15,8 @@ class KeywordHelper():
 		('ar', 'yan'), ('assassin'), ('ausch, witz'),
 		('beh', 'ead'), ('black', ' people'), ('bomb'),
 		('child p', 'orn'), ('chi', 'nk'), ('clinton'), ('columbine'), ('concentrati', 'on camp'), ('c', 'unt'),
-		('da', 'go'), ('death'), ('decapi', 'tate'), ('dies'), ('died'), ('drown'),
+		('da', 'go'), ('death'), ('decapi', 'tat'), ('dies'), ('died'), ('drown'),
+		('execution'),
 		('f', 'ag'), ('fuc', 'k off'), ('fuc', 'k you'),
 		('geno', 'cide'),
 		('hit', 'ler'), ('holo', 'caust'),
@@ -27,7 +30,7 @@ class KeywordHelper():
 		('rac' 'ist'), (' r', 'ape'), ('ra', 'ping'), ('ra', 'pist'), ('ret', 'ard'),
 		('school ', 'shoot'), ('self harm'), ('shoot'), ('stab'),
 		('sl', 'ut'), ('sp', 'ic'), ('suicide'), ('swas', 'tika'),
-		('terr', 'oris'), ('tra', 'nny'), ('trump'),
+		('terr', 'oris'), ('tor', 'ture'), ('tra', 'nny'), ('trump'),
 		('white p', 'ower'),
 		('yo', 'u die'),
 	]
@@ -35,7 +38,7 @@ class KeywordHelper():
 	def __init__(self, config_key='DEFAULT'):
 
 		self._config = ConfigParser()
-		self._config.read('ssi-bot.ini')
+		self._config.read(ROOT_DIR / 'ssi-bot.ini')
 
 		self._positive_keywords = []
 		self._negative_keywords = ["".join(s) for s in self._default_negative_keywords if s]
@@ -72,7 +75,6 @@ class KeywordHelper():
 	def negative_keyword_matches(self, text):
 		# Negative keyword is matched with a starting boundary so basic word forms
 		# like plurals are matched, for example humans and humanoid would both match for just the keyword human.
-
 		if self._negative_keywords:
 			return [keyword for keyword in self._negative_keywords if re.search(r"\b{}".format(keyword), text, re.IGNORECASE)]
 		return []
