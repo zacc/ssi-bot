@@ -10,25 +10,26 @@ class KeywordHelper():
 	# It's only inteded as a basic defence.
 	# Operator should train their model to avoid falling back on this.
 	_default_negative_keywords = [
-		('ar', 'yan'), ('ausch, witz'),
-		('beh', 'ead'), ('black', ' people'), ('bo', 'mb'),
-		('child p', 'orn'), ('chi', 'nk'), ('concentrati', 'on camp'), ('c', 'unt'),
-		('da', 'go'), ('de', 'ath'), ('decapi', 'tate'), ('di', 'es'), ('di', 'ed'),
+		('ar', 'yan'), ('assassin'), ('ausch, witz'),
+		('beh', 'ead'), ('black', ' people'), ('bomb'),
+		('child p', 'orn'), ('chi', 'nk'), ('clinton'), ('columbine'), ('concentrati', 'on camp'), ('c', 'unt'),
+		('da', 'go'), ('death'), ('decapi', 'tate'), ('dies'), ('died'), ('drown'),
 		('f', 'ag'), ('fuc', 'k off'), ('fuc', 'k you'),
 		('geno', 'cide'),
 		('hit', 'ler'), ('holo', 'caust'),
 		('inc', 'est'), ('israel'),
 		('jew', 'ish'), ('je', 'ws'),
-		('k', 'ill'), ('kk', 'k'),
+		('ki', 'ke'), ('k', 'ill'), ('kk', 'k'), ('kys'),
 		('lol', 'i'),
-		('maste', 'r race'), ('mus', 'lim'),
+		('maste', 'r race'), ('murder'), ('muslim'),
 		('nation', 'alist'), ('na', 'zi'), ('nig', 'ga'), ('nig', 'ger'),
 		('pae', 'do'), ('pak', 'i'), ('pale', 'stin'), ('ped', 'o'),
 		('rac' 'ist'), (' r', 'ape'), ('ra', 'ping'), ('ra', 'pist'), ('ret', 'ard'),
-		('self ', 'harm'), ('shoo', 't you'), ('st', 'ab'),
-		('sl', 'ut'), ('sp', 'ic'), ('sui', 'cide'), ('swas', 'tika'),
-		('terr', 'oris'), ('tra', 'nny'),
+		('school ', 'shoot'), ('self harm'), ('shoot'), ('stab'),
+		('sl', 'ut'), ('sp', 'ic'), ('suicide'), ('swas', 'tika'),
+		('terr', 'oris'), ('tra', 'nny'), ('trump'),
 		('white p', 'ower'),
+		('yo', 'u die'),
 	]
 
 	def __init__(self, config_key='DEFAULT'):
