@@ -32,7 +32,7 @@ class KeywordHelper():
 		('sl', 'ut'), ('sp', 'ic'), ('suicide'), ('swas', 'tika'),
 		('terr', 'oris'), ('tor', 'ture'), ('tra', 'nny'), ('trump'),
 		('white p', 'ower'),
-		('you are'), ('you d', 'ie'),
+		('you are a'), ('you d', 'ie'),
 	]
 
 	def __init__(self, config_key='DEFAULT'):
@@ -45,12 +45,12 @@ class KeywordHelper():
 
 		# Append bot's custom positive keywords
 		custom_positive_keywords_list = self._config[config_key].get('positive_keywords', '')
-		if custom_positive_keywords_list != '':
+		if len(custom_positive_keywords_list) > 2:
 			self._positive_keywords += [kw.strip() for kw in custom_positive_keywords_list.lower().split(',')]
 
 		# Append bot's custom negative keywords
 		custom_negative_keywords_list = self._config[config_key].get('negative_keywords', '')
-		if custom_negative_keywords_list != '':
+		if len(custom_negative_keywords_list) > 2:
 			self._negative_keywords += [kw.strip() for kw in custom_negative_keywords_list.lower().split(',')]
 
 		# Loop through each keyword list and test the keyword can be compiled to a regex
