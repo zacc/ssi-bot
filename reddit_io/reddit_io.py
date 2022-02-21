@@ -83,7 +83,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		# This is a hidden option to use a more detailed tagging system which gives the bot a stronger sense when replying.
 		# It is not backwards compatible between old models. The model has to be trained with this 'sense'
-		self._use_reply_sense = self._config[self._bot_username].getboolean('use_reply_sense', False)
+		self._use_reply_sense = self._config[self._bot_username].getboolean('use_reply_sense', True)
 
 		# Variables for the probability of replying to comments
 		# Please be nice and don't spam the subreddits by increasing these values too high.
