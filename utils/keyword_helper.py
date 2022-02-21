@@ -12,27 +12,27 @@ class KeywordHelper():
 	# It's only inteded as a basic defence.
 	# Operator should train their model to avoid falling back on this.
 	_default_negative_keywords = [
-		('ar', 'yan'), ('assassin'), ('ausch, witz'),
+		('ar', 'yan'), ('assassin'), ('ausch', 'witz'),
 		('beh', 'ead'), ('black', ' people'), ('bomb'),
-		('child p', 'orn'), ('chi', 'nk'), ('clinton'), ('columbine'), ('concentrati', 'on camp'), ('c', 'unt'),
+		('child p', 'orn'), ('chi', 'nk'), ('clinton'), ('columbine'), ('concentrati', 'on camp'), ('cu', 'ck'), ('c', 'unt'),
 		('da', 'go'), ('death'), ('decapi', 'tat'), ('dies'), ('died'), ('drown'),
 		('execution'),
 		('f', 'ag'), ('fuc', 'k off'), ('fuc', 'k you'),
 		('geno', 'cide'),
 		('hit', 'ler'), ('holo', 'caust'),
-		('inc', 'est'), ('israel'),
-		('jew', 'ish'), ('je', 'ws'),
+		('inc', 'est'), ('is', 'is'), ('israel'),
+		('jew', 'ish'), ('je', 'ws'), ('ji', 'had'),
 		('ki', 'ke'), ('k', 'ill'), ('kk', 'k'), ('kys'),
 		('lol', 'i'),
 		('maste', 'r race'), ('murder'), ('muslim'),
 		('nation', 'alist'), ('na', 'zi'), ('nig', 'ga'), ('nig', 'ger'),
 		('pae', 'do'), ('pak', 'i'), ('pale', 'stin'), ('ped', 'o'),
-		('rac' 'ist'), (' r', 'ape'), ('ra', 'ping'), ('ra', 'pist'), ('ret', 'ard'),
+		('rac' 'ist'), ('r', 'ape'), ('ra', 'ping'), ('ra', 'pist'), ('ret', 'ard'),
 		('school ', 'shoot'), ('self harm'), ('shoot'), ('stab'),
 		('sl', 'ut'), ('sp', 'ic'), ('suicide'), ('swas', 'tika'),
 		('terr', 'oris'), ('tor', 'ture'), ('tra', 'nny'), ('trump'),
 		('white p', 'ower'),
-		('yo', 'u die'),
+		('you are'), ('you d', 'ie'),
 	]
 
 	def __init__(self, config_key='DEFAULT'):
