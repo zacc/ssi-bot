@@ -1,11 +1,9 @@
 
-Minimum Python requirement: Python 3.6
+Minimum Python requirement: Python 3.7
 
-Full support/developed on:
-Ubuntu-flavor Linux.
+Full support/developed on Ubuntu-flavor Linux.
 
-A setup guide for Windows is here:
-https://docs.google.com/document/d/1t9b8QSsWiTU5uSBRZQBavKn9jK040t08
+Works on Windows with Python 3.8+ (support for SQLite3's JSON field type is required)
 
 
 ### Overview
@@ -19,23 +17,26 @@ This framework also contains scripts and tools for fine-tuning the GPT-2 model. 
 An overview of AI/Machine Learning Text Generation can be found here:
 https://huggingface.co/tasks/text-generation
 
-
-### Choosing training material
-
-Choosing good training material for your bot is very important.
-Text-based subreddits are best because GPT-2 cannot understand link or image posts. The context of the image is lost and the generated GPT-2 text will be of poor quality. 
-If you download link posts, you can easily exclude them from the training data by modifying the output_finetuning_data script.
-
 #### Bannable/offensive content
-Bots using this framework have been banned by reddit.
+Bots using this framework have been banned by reddit. Bot owner's main account and any other accounts using the same IP address. If you create a toxic bot that creates offensive content it's highly likely to get banned by Reddit. There is nothing Subreddit moderators can do about that.
 
 Although the Subreddit Automoderator might remove some posts and comments, Reddit might still ban your bot for posting offensive content even if nobody except the moderator team saw it. The subreddit moderators have no control over this ban.
 It's very important to use the negative_keywords feature in the config to prevent bad text being posted to Reddit in the first place.
 
 The best way to avoid getting your bot banned is to train it with safe material in the first place. Some tips for cleaning the data are: 
-- Choose a subreddit with safe content
+- Choose subreddits with safe content
 - Modify the output_finetuning_data script to exclude comments with offensive content
+- Choose content where the context is clear and unambiguous
 - Find/replace on the training output data to change phrases to safe content
+- Use the negative_keywords parameter in ssi-bot ini file to stop the bot posting negative content
+
+
+### Choosing training material
+Choosing good training material for your bot is very important.
+Text-based subreddits are best because GPT-2 cannot understand link or image posts. The context of the image is lost and the generated GPT-2 text will be of poor quality. 
+If you download link posts, you can easily exclude them from the training data by modifying the output_finetuning_data script, some code examples are available near the end of this README.md
+
+Meme-type subreddits are often poor data sources for GPT-2. In meme subreddits, the real/funny content is often in a meme image. GPT-2 cannot read images, so the context and funnys of the meme are lost.
 
 #### Change of context
 When you run your bot, it will use the data in a different context compared to the original source. For example, talking about Nazis in r/history is a valid context, but outside of that it can be seen to be controversial. The context is important when deciding if your bot is posting offensive content or not.
@@ -99,8 +100,8 @@ You will need to download a few hundred Mb of data to produce enough training da
 This script will output all of the data from the pushshift database into two text files for finetuning.
 One text file is the training data and the other is a control sample used for evaluating the fine tuning process.
 
-Using the 124M GPT-2 model, at least 10mb of training data is preferred.
-With less than 10mb of data you are at risk of overfitting the model to the data and you won't get good results.
+Using the 124M GPT-2 model, 6-10mb of training data is preferred.
+With less than 6mb of data you are at risk of overfitting the model to the data and you won't get good results.
 
 To use these scripts, copy `dataset_template.ini` to `dataset.ini` and configure it accordingly.
 
@@ -156,7 +157,7 @@ Repetitive content makes the model and the bot repeat that content too much. We 
      
 	# creates a list of OR filters excluding each of the title strings
 	# ~ means negative, to exclude all titles containing the word java
-	exclude_title_filters = reduce(operator.or_, [~fn.Lower(db_Submission.title).contains(s) for s in exclude_title_strings])
+	exclude_title_filters = reduce(operator.and_, [~fn.Lower(db_Submission.title).contains(s) for s in exclude_title_strings])
      
 	filtered_submissions = list(db_Submission.select().
 		where((fn.Lower(db_Submission.subreddit) == 'learnpython') &
@@ -192,7 +193,7 @@ The cheapest way to finetune the model is to use Google Colaboratory, which give
 
 A Python notebook file (`ssi-bot_finetuning_notebook.ipynb`) is kept in the `model_finetuning` directory.
 
-Navigate to https://colab.research.google.com/ and click Upload. Upload the ipynb file and then follow the instructions.
+Navigate to https://colab.research.google.com/ and click Upload. Upload the .ipynb file and then follow the instructions.
 
 After training, the optimum trained model will be saved in the `best_model` folder. Download the model and unzip it into the `models/` folder of your ssi-bot project.
 
@@ -203,10 +204,9 @@ Copy the code from the Google Colab above into a Python script and run it on you
 
 ## RUNNING THE BOT ON REDDIT
 
-Although the bot is finetuned on a GPU, a CPU is sufficient for using the
-model to generate text.
+Although the bot is finetuned on a GPU, a CPU is sufficient for using the model to generate text.
 
-Any modern CPU can be used, having around 4Gb of RAM or more is the main requirement.
+Any modern CPU can be used; having around 4Gb of RAM or more is the main requirement.
 
 In order to run on SubSimGPT2Interactive, we require the bot to be running 24/7.
 This means putting it on a VPS/server, or an old laptop in your house could suffice too.
@@ -219,14 +219,16 @@ called `tmux`
 
 ssi-bot Config file
 1. Copy and rename ssi-bot_template.ini to ssi-bot.ini
-1. Populate the file with filepath to model and any keywords you want to use
+1. Where you have section [bot_1_username], change the section to your bot's username.
+1. Populate bot's section with filepath to model and negative keywords you want to use. The program already includes some basic negative keywords but we suggest you add more.
 
 Create the bot account, setup reddit app and associated PRAW Config file
 1. Create the bot account on reddit
 1. Logged in as the bot, navigate to https://www.reddit.com/prefs/apps
 1. Click "are you a developer? Create an app.." and complete the flow
-1. Copy and rename praw_template.ini to praw.ini
-1. Set all the data in praw.ini from step 3 above
+1. Copy praw_template.ini to praw.ini
+1. Just as you did with ssi-bot.ini, rename the [bot_1_username] section to your bot's username. The sections should match, between ssi-bot.ini and praw.ini.
+1. Set all the data in praw.ini as from step 3 above
 
 Running the bot
 1. The bot is run by typing `python run.py`
