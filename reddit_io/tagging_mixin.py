@@ -2,7 +2,7 @@
 import logging
 import random
 
-from praw.models Comment as praw_Comment
+from praw.models import Comment as praw_Comment
 
 
 class TaggingMixin():
