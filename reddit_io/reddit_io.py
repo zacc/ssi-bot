@@ -33,6 +33,10 @@ class RedditIO(threading.Thread, LogicMixin):
 	_subreddit_flair_id_map = {}
 	_new_submission_schedule = []
 
+	_subreddits = []
+	_submission_stream = None
+	_comment_stream = None
+
 	_default_text_generation_parameters = default_text_generation_parameters
 
 	def __init__(self, bot_username):
@@ -48,10 +52,10 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		self._keyword_helper = KeywordHelper(self._bot_username)
 
-		subreddits_config_string = self._config[self._bot_username].get('subreddits', 'test')
-		self._subreddits = [x.strip() for x in subreddits_config_string.lower().split(',')]
-
-		logging.info(f"{self._bot_username} will reply to comments on subreddits: {', '.join(self._subreddits)}.")
+		subreddits_config_string = self._config[self._bot_username].get('subreddits', None)
+		if subreddits_config_string:
+			self._subreddits = [x.strip() for x in subreddits_config_string.lower().split(',')]
+			logging.info(f"{self._bot_username} will reply to comments on subreddits: {', '.join(self._subreddits)}.")
 
 		subreddit_flair_id_string = self._config[self._bot_username].get('subreddit_flair_id_map', '')
 		if subreddit_flair_id_string != '':
@@ -105,9 +109,10 @@ class RedditIO(threading.Thread, LogicMixin):
 		# this will automatically pick up the configuration from praw.ini
 		self._praw = praw.Reddit(self._bot_username)
 
-		self._subreddit_helper = self._praw.subreddit('+'.join(self._subreddits))
-		self._submission_stream = self._subreddit_helper.stream.submissions(skip_existing=False, pause_after=0)
-		self._comment_stream = self._subreddit_helper.stream.comments(skip_existing=False, pause_after=0)
+		if self._subreddits:
+			self._subreddit_helper = self._praw.subreddit('+'.join(self._subreddits))
+			self._submission_stream = self._subreddit_helper.stream.submissions(skip_existing=False, pause_after=0)
+			self._comment_stream = self._subreddit_helper.stream.comments(skip_existing=False, pause_after=0)
 		self._inbox_stream = self._praw.inbox.stream(skip_existing=False, pause_after=0)
 
 	def run(self):
@@ -582,6 +587,10 @@ def chain_listing_generators(*iterables):
 	# Special tool for chaining PRAW's listing generators
 	# It joins the three iterables together so that we can DRY
 	for it in iterables:
+		if not hasattr(it, '__iter__'):
+			# it is not an iterable.
+			continue
+
 		for element in it:
 			if element is None:
 				break
