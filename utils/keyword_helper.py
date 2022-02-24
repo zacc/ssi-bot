@@ -12,10 +12,10 @@ class KeywordHelper():
 	# It's only inteded as a basic defence.
 	# Operator should train their model to avoid falling back on this.
 	_default_negative_keywords = [
-		('ar', 'yan'), ('assassin'), ('ausch', 'witz'),
+		('abor', 'tion'), ('ar', 'yan'), ('assassin'), ('ausch', 'witz'),
 		('beh', 'ead'), ('black', ' people'), ('bomb'),
 		('child p', 'orn'), ('chi', 'nk'), ('clinton'), ('columbine'), ('concentrati', 'on camp'), ('cu', 'ck'), ('c', 'unt'),
-		('da', 'go'), ('death'), ('decapi', 'tat'), ('dies'), ('died'), ('drown'),
+		('da', 'go'), ('dead'), ('death'), ('decapi', 'tat'), ('dies'), ('died'), ('drown'),
 		('execution'),
 		('f', 'ag'), ('fuc', 'k off'), ('fuc', 'k you'),
 		('geno', 'cide'),
