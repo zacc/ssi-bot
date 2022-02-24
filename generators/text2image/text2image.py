@@ -88,7 +88,7 @@ class Text2Image(threading.Thread, TaggingMixin):
 		start_time = time.time()
 
 		# pop the prompt out from the args
-		prompt = image_generation_parameters.pop('prompt', '')
+		prompt = image_generation_parameters.pop('prompt', '').replace('\'', '').replace("\"", "")
 		x = image_generation_parameters.pop('x_size', 256)
 		y = image_generation_parameters.pop('y_size', 256)
 		iterations = image_generation_parameters.pop('iterations', 500)
@@ -101,7 +101,7 @@ class Text2Image(threading.Thread, TaggingMixin):
 		for line in p.stdout:
 			# Stream the output from the subprocess into the logging
 			# Convert bytes to a string
-			logging.info(ftfy.fix_text(line))
+			logging.info(ftfy.fix_text(line.replace('\n', '')))
 		p.wait()
 
 		end_time = time.time()
