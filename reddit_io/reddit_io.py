@@ -394,9 +394,10 @@ class RedditIO(threading.Thread, LogicMixin):
 				post_job.generated_image_path = None
 				post_job.reddit_post_attempts = 0
 				post_job.save()
+			logging.exception(e)
 
 		except Exception as e:
-			raise e
+			logging.exception(e)
 
 		finally:
 			if not bypass_finally:
