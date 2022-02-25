@@ -581,8 +581,6 @@ class RedditIO(threading.Thread, LogicMixin):
 					break_after_compare = True
 
 			match_rate = difflib.SequenceMatcher(None, text_to_compare.lower(), reply_body.lower()).ratio()
-			print(text_to_compare.lower(), reply_body.lower())
-			print(match_rate)
 			if difflib.SequenceMatcher(None, text_to_compare.lower(), reply_body.lower()).ratio() >= 0.95:
 				# A historical asset and the reply are > 95% match, return True
 				return True
