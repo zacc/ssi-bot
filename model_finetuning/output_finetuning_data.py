@@ -68,6 +68,8 @@ if config['DEFAULT']['negative_keywords']:
 
 lowercase_neg_kw_list = [a.lower().strip() for a in default_negative_keywords + config_negative_keywords]
 
+mega_negative_keywords_regex = r'\b{}'.format('|'.join(lowercase_neg_kw_list))
+
 # The name of the subreddits trained from
 training_subreddits = []
 
@@ -128,8 +130,6 @@ def gather_comments_for_submission(sub):
 
 	db_object_output_list = [sub]
 
-	exclude_comment_negative_keywords = reduce(operator.and_, [~fn.Lower(db_Comment.body).regexp(r"\b{}".format(s)) for s in lowercase_neg_kw_list])
-
 	for i in range(0, 10):
 		if isinstance(parent, db_Submission):
 			parent_id = f't3_{parent.id}'
@@ -140,7 +140,7 @@ def gather_comments_for_submission(sub):
 		base_comment_query = db_Comment.select().where(
 				(db_Comment.parent_id == parent_id) &
 				(db_Comment.is_url_only == False) &
-				(exclude_comment_negative_keywords) &
+				(~fn.Lower(db_Comment.body).regexp(mega_negative_keywords_regex)) &
 				(fn.Lower(db_Comment.author).not_in(lowercase_author_list)))
 
 		if i == 0:
@@ -202,19 +202,17 @@ def main():
 
 	all_submissions = []
 
-	exclude_title_negative_keywords = reduce(operator.and_, [~fn.Lower(db_Submission.title).regexp(r"\b{}".format(s)) for s in lowercase_neg_kw_list])
-	exclude_selftext_negative_keywords = reduce(operator.and_, [~fn.Lower(db_Submission.selftext).regexp(r"\b{}".format(s)) for s in lowercase_neg_kw_list])
-
 	link_submissions = list(db_Submission.select()
 		.where((fn.Lower(db_Submission.subreddit).in_(training_subreddits)) &
 				(db_Submission.is_self == False) &
-				(exclude_title_negative_keywords) &
+				(~fn.Lower(db_Submission.title).regexp(mega_negative_keywords_regex)) &
 				(fn.Lower(db_Submission.author).not_in(lowercase_author_list))))
 
 	selftext_submissions = list(db_Submission.select()
 		.where((fn.Lower(db_Submission.subreddit).in_(training_subreddits)) &
 				(db_Submission.selftext) &
-				(exclude_title_negative_keywords) &
+				(~fn.Lower(db_Submission.title).regexp(mega_negative_keywords_regex)) &
+				(~fn.Lower(db_Submission.selftext).regexp(mega_negative_keywords_regex)) &
 				(fn.Lower(db_Submission.author).not_in(lowercase_author_list))))
 
 	for s in link_submissions + selftext_submissions:
