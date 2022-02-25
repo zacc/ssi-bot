@@ -28,7 +28,7 @@ class KeywordHelper():
 		('nation', 'alist'), ('na', 'zi'), ('nig', 'ga'), ('nig', 'ger'),
 		('pae', 'do'), ('pak', 'i'), ('pale', 'stin'), ('ped', 'o'), ('po', 'rnhub'),
 		('rac' 'ist'), ('r', 'ape'), ('ra', 'ping'), ('ra', 'pist'), ('ret', 'ard'),
-		('school ', 'shoot'), ('self harm'), ('semi', 'ti'), ('shoot'), ('stab'), ('supremacy'),
+		('school ', 'shoot'), ('self harm'), ('semi', 'ti'), ('shi', 'thole'), ('shoot'), ('stab'), ('supremacy'),
 		('sl', 'ut'), ('sp', 'ic'), ('suicide'), ('swas', 'tika'), ('shut the ', '\\w{4} up'), ('suck my d', 'ick'),
 		('terr', 'oris'), ('tor', 'ture'), ('tra', 'nny'), ('trump'),
 		('white p', 'ower'),
