@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import praw
 from praw.models import (Submission as praw_Submission, Comment as praw_Comment, Message as praw_Message)
 from peewee import fn
+import pyimgur
 
 from .logic_mixin import LogicMixin
 
@@ -28,6 +29,8 @@ class RedditIO(threading.Thread, LogicMixin):
 	"""
 
 	_praw = None
+	_imgur_client_id = None
+
 	_keyword_helper = None
 
 	_subreddit_flair_id_map = {}
@@ -49,6 +52,8 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		self._config = ConfigParser()
 		self._config.read('ssi-bot.ini')
+
+		self._imgur_client_id = self._config[self._bot_username].get('imgur_client_id', None)
 
 		self._keyword_helper = KeywordHelper(self._bot_username)
 
@@ -348,29 +353,32 @@ class RedditIO(threading.Thread, LogicMixin):
 				logging.info(f"Submission text could not be found in generated text of job {post_job.id}")
 				return
 
+			post_parameters['flair_id'] = self._subreddit_flair_id_map.get(post_job.subreddit.lower(), None)
+
 			if post_job.generated_image_path:
 				# If an image has been generated for this job
 
 				if post_job.generated_image_path.startswith('http'):
-					# it's actually a HTTP url
+					# it's actually a HTTP url so set it to the 'url' parameter
 					post_parameters['url'] = post_job.generated_image_path
 				else:
-					# Otherwise assume it's on the file system and we can upload it to reddit
-					post_parameters['image_path'] = post_job.generated_image_path
+					# Assume it's a local image, upload it to imgur then to reddit
 
-			post_parameters['flair_id'] = self._subreddit_flair_id_map.get(post_job.subreddit.lower(), None)
+					if not self._imgur_client_id:
+						logging.WARNING(f"{self._bot_username} is trying to post its own generated image, but the Imgur Client ID is not set in ssi-bot.ini. Cannot upload the image to Imgur")
+						return
 
-			if 'image_path' in post_parameters:
-				submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit_image(**post_parameters, nsfw=self._set_nsfw_flair_on_submissions)
+					imgur = pyimgur.Imgur(self._imgur_client_id)
+					uploaded_image = imgur.upload_image(post_job.generated_image_path, title=post_parameters['title'])
+					post_parameters['url'] = uploaded_image.link
 
-			else:
-				if 'url' not in post_parameters and 'selftext' not in post_parameters:
-					# there must be at minimum a title and (url or selftext) params with a new submission
-					post_parameters['selftext'] = ''
+			elif 'url' not in post_parameters and 'selftext' not in post_parameters:
+				# there must be at minimum a title and (url or selftext) params with a new submission
+				post_parameters['selftext'] = ''
 
-				# Sometimes url links posted are banned by reddit.
-				# It will raise a DOMAIN_BANNED exception
-				submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters, nsfw=self._set_nsfw_flair_on_submissions)
+			# Sometimes url links posted are banned by reddit.
+			# It will raise a DOMAIN_BANNED exception
+			submission_praw_thing = self._praw.subreddit(post_job.subreddit).submit(**post_parameters, nsfw=self._set_nsfw_flair_on_submissions)
 
 			if not submission_praw_thing:
 				# no submission has been made

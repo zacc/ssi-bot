@@ -3,6 +3,7 @@ nltk
 peewee
 praw
 psutil
+pyimgur
 pytest
 requests
 simpletransformers
