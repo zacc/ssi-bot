@@ -1,3 +1,4 @@
+import itertools
 import pickle
 import pytest
 
@@ -24,3 +25,35 @@ class TestCanReplyToPrawThing():
 
 		result = RedditIO._is_praw_thing_removed_or_deleted(RedditIO, thing)
 		assert result == expected
+
+
+class TestReplyMatchesHisory():
+
+	@pytest.fixture(autouse=True)
+	def submission(self):
+		fh = open('tests/pickles/submission_selftext.pkl', 'rb')
+		submission = pickle.load(fh)
+		yield submission
+
+	def _get_comment_by_id(self, comment_forest, comment_id):
+		# Flatten the CommentForest into a single list, then find the comment
+		flat_list = list(itertools.chain(comment_forest.list()))
+		for c in flat_list:
+			if c.id == comment_id:
+				return c
+
+	def test_reply_matches_history_positive(self, submission):
+
+		comment = self._get_comment_by_id(submission.comments, 'hvl56vi')
+		reply_body = "You are not allowed to post here."
+
+		result = RedditIO._check_reply_matches_history(RedditIO, comment, reply_body)
+		assert result == True
+
+	def test_reply_matches_history_negative(self, submission):
+
+		comment = self._get_comment_by_id(submission.comments, 'hvl56vi')
+		reply_body = "Thank you lord Gutenman."
+
+		result = RedditIO._check_reply_matches_history(RedditIO, comment, reply_body)
+		assert result == False

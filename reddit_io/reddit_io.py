@@ -293,19 +293,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			# Begin to check whether the generated matches the text the bot is replying to.
 			# The model can get fixated on repeating words and it looks bad.
-
-			# First, capture the text we want to compare
-			source_text_to_compare = None
-
-			if isinstance(source_praw_thing, praw_Submission):
-				# On a submission we'll only check the title
-				source_text_to_compare = source_praw_thing.title
-			elif isinstance(source_praw_thing, praw_Comment) or isinstance(source_praw_thing, praw_Message):
-				source_text_to_compare = source_praw_thing.body
-
-			if source_text_to_compare and reply_parameters['body'] and\
-				difflib.SequenceMatcher(None, source_text_to_compare.lower(), reply_parameters['body'].lower()).ratio() > 0.95:
-				# The generated text is 95% similar to the previous comment (ie it's a boring duplicate)
+			if self._check_reply_matches_history(source_praw_thing, reply_parameters['body']):
 				logging.info(f"Job {post_job.id} had duplicated generated text.")
 
 				bypass_finally = True
@@ -562,6 +550,48 @@ class RedditIO(threading.Thread, LogicMixin):
 				logging.error(f'Submission {submission} has been locked.')
 				return True
 		# Assume not deleted
+		return False
+
+	def _check_reply_matches_history(self, source_praw_thing, reply_body, to_level=6):
+		# Checks through the history of the source_praw_thing
+		# and if the reply_body has a high match, return False.
+
+		counter = 0
+		text_to_compare = ''
+		loop_thing = source_praw_thing
+		break_after_compare = False
+
+		while loop_thing and counter < to_level:
+			if isinstance(loop_thing, praw_Submission):
+				# On a submission we'll only check the title
+				text_to_compare = loop_thing.title
+				break_after_compare = True
+
+			elif isinstance(loop_thing, praw_Comment):
+				text_to_compare = loop_thing.body
+				loop_thing = loop_thing.parent()
+
+			elif isinstance(loop_thing, praw_Message):
+				text_to_compare = loop_thing.body
+
+				if loop_thing.parent_id:
+					loop_thing = self._praw.inbox.message(message_id=loop_thing.parent_id[3:])
+				else:
+					# It's the top message
+					break_after_compare = True
+
+			match_rate = difflib.SequenceMatcher(None, text_to_compare.lower(), reply_body.lower()).ratio()
+			print(text_to_compare.lower(), reply_body.lower())
+			print(match_rate)
+			if difflib.SequenceMatcher(None, text_to_compare.lower(), reply_body.lower()).ratio() >= 0.95:
+				# A historical asset and the reply are > 95% match, return True
+				return True
+
+			counter += 1
+
+			if break_after_compare:
+				break
+
 		return False
 
 	def _find_depth_of_comment(self, praw_comment):
