@@ -244,7 +244,6 @@ def main():
 
 		with open(f'{filename}_train.txt', 'a', encoding='utf-8') as fd:
 			for return_val, text_gen_string in zip(train_submissions, executor.map(gather_comments_for_submission, train_submissions)):
-				print(return_val)
 				counter += 1
 				if text_gen_string:
 					fd.write(text_gen_string + '\n')
