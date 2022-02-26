@@ -20,6 +20,7 @@ from generators.text import default_text_generation_parameters
 
 from bot_db.db import Thing as db_Thing
 from utils.keyword_helper import KeywordHelper
+from utils.toxicity_helper import ToxicityHelper
 
 
 class RedditIO(threading.Thread, LogicMixin):
@@ -56,6 +57,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		self._imgur_client_id = self._config[self._bot_username].get('imgur_client_id', None)
 
 		self._keyword_helper = KeywordHelper(self._bot_username)
+		self._toxicity_helper = ToxicityHelper(self._bot_username)
 
 		subreddits_config_string = self._config[self._bot_username].get('subreddits', None)
 		if subreddits_config_string:

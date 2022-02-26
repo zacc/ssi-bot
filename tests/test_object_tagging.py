@@ -196,3 +196,15 @@ class TestMessageTagging():
 		tagging = TaggingMixin()
 		output = tagging.tag_message(message, use_reply_sense=True)
 		assert output == "<|sot>PRAW<|eot|><|soocr|>First message.<|eoocr|>"
+
+
+class TestRemoveTags():
+
+	@pytest.mark.parametrize("test_input, expected",
+		[("<|eor|><|sor u/smeghead|>Hate but they can't be.<|sor|>This is why it is against the law. It is against the law.<|eor|><|eoss|><|endoftext|>",
+			"Hate but they can't be. This is why it is against the law. It is against the law.")])
+	def test_remove_tags(self, test_input, expected):
+
+		tagging = TaggingMixin()
+		output = tagging.remove_tags_from_string(test_input)
+		assert output == expected

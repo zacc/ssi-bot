@@ -1,4 +1,5 @@
 beautifulsoup4
+detoxify==0.4.0
 nltk
 peewee
 praw
@@ -6,5 +7,5 @@ psutil
 pyimgur
 pytest
 requests
-simpletransformers
+simpletransformers==0.63.4
 torch

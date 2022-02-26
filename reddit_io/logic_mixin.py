@@ -126,6 +126,11 @@ class LogicMixin(TaggingMixin):
 		if submission_link_flair_text.lower() in ['announcement']:
 			return 0
 
+		if self._toxicity_helper.text_above_toxicity_threshold(thing_text_content):
+			# The text is above the toxicity as measured by the detoxify model
+			logging.info("Failed toxicity test.")
+			return 0
+
 		# From here we will start to calculate the probability cumulatively
 		# Adjusting the weights here will change how frequently the bot will post
 		# Try not to spam the sub too much and let other bots and humans have space to post
