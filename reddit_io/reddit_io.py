@@ -195,7 +195,7 @@ class RedditIO(threading.Thread, LogicMixin):
 					# It will generate a reply, so grab the parameters before we put it into the database
 					text_generation_parameters = self.get_text_generation_parameters(praw_thing)
 				else:
-					logging.info(f"{praw_thing} Random value {random_value:.3f} < Reply probabililty {(reply_probability):.1f}. No reply.. :(")
+					logging.info(f"{praw_thing} Random value {random_value:.3f} > Reply probabililty {(reply_probability):.1f}. No reply.. :(")
 
 				# insert it into the database
 				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters=text_generation_parameters)
@@ -231,7 +231,7 @@ class RedditIO(threading.Thread, LogicMixin):
 					# It will generate a reply, so grab the parameters before we put it into the database
 					text_generation_parameters = self.get_text_generation_parameters(praw_thing)
 				else:
-					logging.info(f"{praw_thing} Random value {random_value:.3f} < Reply probabililty {(reply_probability):.1f}. No reply.. :(")
+					logging.info(f"{praw_thing} Random value {random_value:.3f} > Reply probabililty {(reply_probability):.1f}. No reply.. :(")
 
 				# insert it into the database
 				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters=text_generation_parameters)
@@ -581,6 +581,8 @@ class RedditIO(threading.Thread, LogicMixin):
 					break_after_compare = True
 
 			match_rate = difflib.SequenceMatcher(None, text_to_compare.lower(), reply_body.lower()).ratio()
+			print(text_to_compare.lower(), reply_body.lower())
+			print(match_rate)
 			if difflib.SequenceMatcher(None, text_to_compare.lower(), reply_body.lower()).ratio() >= 0.95:
 				# A historical asset and the reply are > 95% match, return True
 				return True

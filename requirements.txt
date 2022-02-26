@@ -8,3 +8,5 @@ pytest
 requests
 simpletransformers
 torch
+detoxify
+ftfy

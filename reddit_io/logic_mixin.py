@@ -9,6 +9,7 @@ from praw.models import (Submission as praw_Submission, Comment as praw_Comment,
 
 from .tagging_mixin import TaggingMixin
 
+from detoxify import Detoxify
 
 class LogicMixin(TaggingMixin):
 	"""
@@ -120,6 +121,12 @@ class LogicMixin(TaggingMixin):
 			# The title or selftext/body contains negative keyword matches
 			# and we will avoid engaging with negative content
 			return 0
+
+		# check Detoxify scores - don't respond to toxic comments
+		scores = Detoxify('unbiased-small').predict(thing_text_content)
+		for score_type in ['identity_attack', 'insult', 'obscene', 'severe_toxicity', 'threat', 'toxicity']:
+			if scores[score_type] > self._config['DEFAULT'].getfloat(score_type, 0):
+				return 0
 
 		# if the submission is flaired as a subreddit announcement,
 		# do not reply so as to not spam the sub

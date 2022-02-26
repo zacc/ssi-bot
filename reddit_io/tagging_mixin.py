@@ -4,6 +4,7 @@ import random
 
 from praw.models import Comment as praw_Comment
 
+from detoxify import Detoxify
 
 class TaggingMixin():
 	"""
@@ -165,6 +166,13 @@ class TaggingMixin():
 		if reply_body:
 			return {'body': reply_body}
 
+		# Check toxicity of the generated reply
+		reply_scores = Detoxify('unbiased-small').predict(reply_body)
+		score_types = ['identity_attack', 'insult', 'obscene', 'severe_toxicity', 'sexual_explicit', 'threat', 'toxicity']
+		for score_type in score_types:
+			if reply_scores[score_type] > self._config['DEFAULT'].getfloat(score_type, 0):
+				return {}
+
 		# Return nothing
 		return {}
 
@@ -179,6 +187,13 @@ class TaggingMixin():
 
 		title_text = generated_text[idx_title_start + len(self._title_start_tag):idx_title_end]
 
+		# Check toxicity of the generated title
+		title_scores = Detoxify('unbiased-small').predict(title_text)
+		score_types = ['identity_attack', 'insult', 'obscene', 'severe_toxicity', 'sexual_explicit', 'threat', 'toxicity']
+		for score_type in score_types:
+			if title_scores[score_type] > self._config['DEFAULT'].getfloat(score_type, 0):
+				return None
+
 		if (0 < len(title_text) < 300):
 			# Validate the title length is within reddit's range
 			return title_text
@@ -192,6 +207,14 @@ class TaggingMixin():
 			return None
 
 		selftext_text = generated_text[idx_st_start + len(self._selftext_start_tag):idx_st_end]
+
+		# Check toxicity of the generated selftext
+		text_scores = Detoxify('unbiased-small').predict(selftext_text)
+		score_types = ['identity_attack', 'insult', 'obscene', 'severe_toxicity', 'sexual_explicit', 'threat', 'toxicity']
+		for score_type in score_types:
+			if text_scores[score_type] > self._config['DEFAULT'].getfloat(score_type, 0):
+				return None
+
 		return selftext_text
 
 	def extract_submission_from_generated_text(self, generated_text):
