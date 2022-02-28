@@ -1,14 +1,32 @@
 #!/usr/bin/env python3
 
+import json
 import logging
 import os
 import time
 
-from peewee import *
+from functools import partial, singledispatch
+
+from playhouse.sqlite_ext import *
 from playhouse.sqlite_ext import SqliteExtDatabase
+import numpy as np
 
 db_file_path = os.path.join('pushshift.sqlite3')
 db_instance = SqliteExtDatabase(db_file_path, thread_safe=True, pragmas={'journal_mode': 'wal2', 'foreign_keys': 0}, regexp_function=True)
+
+@singledispatch
+def to_serializable(val):
+	"""Used by default."""
+	return str(val)
+
+
+@to_serializable.register(np.float32)
+def ts_float32(val):
+	"""Used if *val* is an instance of numpy.float32."""
+	return np.float64(val)
+
+# We use a special partial wrapper around json.dumps to convert numpy's float32 number to a compatible float
+numpy_safe_dumps = partial(json.dumps, default=to_serializable)
 
 
 class Submission(Model):
@@ -28,6 +46,9 @@ class Submission(Model):
 	subreddit = TextField()
 	title = TextField()
 	url = TextField(null=True)
+
+	# Non-standard fields
+	detoxify_prediction = JSONField(null=True, json_dumps=numpy_safe_dumps)
 
 	@property
 	def combined_text(self):
@@ -52,8 +73,9 @@ class Comment(Model):
 	score = IntegerField()
 	stickied = BooleanField(default=False)
 
-	# Non-standard field
+	# Non-standard fields
 	is_url_only = BooleanField()
+	detoxify_prediction = JSONField(null=True, json_dumps=numpy_safe_dumps)
 
 	def parent(self):
 		# This function gets the parent Comment or Submission
