@@ -42,8 +42,6 @@ class RedditIO(threading.Thread, LogicMixin):
 
 	_default_text_generation_parameters = default_text_generation_parameters
 
-	_first_run = True
-
 	def __init__(self, bot_username):
 		super().__init__(name=bot_username, daemon=True)
 
@@ -118,6 +116,9 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		if self._subreddits:
 			self._subreddit_helper = self._praw.subreddit('+'.join(self._subreddits))
+			self._submission_stream = self._subreddit_helper.stream.submissions(skip_existing=False, pause_after=0)
+			self._comment_stream = self._subreddit_helper.stream.comments(skip_existing=False, pause_after=0)
+		self._inbox_stream = self._praw.inbox.stream(skip_existing=False, pause_after=0)
 
 	def run(self):
 
@@ -128,17 +129,12 @@ class RedditIO(threading.Thread, LogicMixin):
 		while True:
 
 			try:
-				self._inbox_stream = self._praw.inbox.stream(skip_existing=not self._first_run, pause_after=0)
 				logging.info(f"Beginning to process inbox stream")
 				self.poll_inbox_stream()
 			except:
 				logging.exception("Exception occurred while processing the inbox streams")
 
 			try:
-				if self._subreddit_helper:
-					self._submission_stream = self._subreddit_helper.stream.submissions(skip_existing=not self._first_run, pause_after=0)
-					self._comment_stream = self._subreddit_helper.stream.comments(skip_existing=not self._first_run, pause_after=0)
-
 				logging.info(f"Beginning to process incoming reddit streams")
 				self.poll_incoming_streams()
 			except:
@@ -166,7 +162,6 @@ class RedditIO(threading.Thread, LogicMixin):
 			except:
 				logging.exception("Exception occurred while scheduling a new submission")
 
-			self._first_run = False
 			time.sleep(120)
 
 	def poll_inbox_stream(self):
