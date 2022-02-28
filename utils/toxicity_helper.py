@@ -1,5 +1,7 @@
 import logging
 
+import torch
+
 from configparser import ConfigParser
 from detoxify import Detoxify
 
@@ -18,7 +20,8 @@ class ToxicityHelper():
 
 		self.load_config_section(config_section)
 
-		self._detoxify = Detoxify('unbiased-small')
+		cuda_available = torch.cuda.is_available()
+		self._detoxify = Detoxify('unbiased-small', device='cuda' if cuda_available else 'cpu')
 
 	def load_config_section(self, config_section):
 		# This can be used to re-configure on the fly.
