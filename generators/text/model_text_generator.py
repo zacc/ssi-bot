@@ -95,7 +95,7 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 
 						toxicity_failure = self.validate_toxicity(job.bot_username, prompt, generated_text)
 						if toxicity_failure:
-							logging.info(f"Generated text for {job} failed toxicity test, this text will be rejected.")
+							logging.info(f"Generated text for {job} failed toxicity test, this text will be rejected.-> {generated_text}")
 							continue
 
 						# if the model generated text, set it into the 'job'

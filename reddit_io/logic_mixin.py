@@ -128,7 +128,7 @@ class LogicMixin(TaggingMixin):
 
 		if self._toxicity_helper.text_above_toxicity_threshold(thing_text_content):
 			# The text is above the toxicity as measured by the detoxify model
-			logging.info("Failed toxicity test.")
+			logging.info(f"{praw_thing} Failed toxicity test, no reply..")
 			return 0
 
 		# From here we will start to calculate the probability cumulatively
