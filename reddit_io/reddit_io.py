@@ -34,12 +34,9 @@ class RedditIO(threading.Thread, LogicMixin):
 
 	_keyword_helper = None
 
+	_subreddits = []
 	_subreddit_flair_id_map = {}
 	_new_submission_schedule = []
-
-	_subreddits = []
-	_submission_stream = None
-	_comment_stream = None
 
 	_default_text_generation_parameters = default_text_generation_parameters
 
@@ -59,10 +56,10 @@ class RedditIO(threading.Thread, LogicMixin):
 		self._keyword_helper = KeywordHelper(self._bot_username)
 		self._toxicity_helper = ToxicityHelper(self._bot_username)
 
-		subreddits_config_string = self._config[self._bot_username].get('subreddits', None)
-		if subreddits_config_string:
-			self._subreddits = [x.strip() for x in subreddits_config_string.lower().split(',')]
-			logging.info(f"{self._bot_username} will reply to comments on subreddits: {', '.join(self._subreddits)}.")
+		subreddits_config_string = self._config[self._bot_username].get('subreddits', 'test')
+		self._subreddits = [x.strip() for x in subreddits_config_string.lower().split(',')]
+
+		logging.info(f"{self._bot_username} will reply to comments on subreddits: {', '.join(self._subreddits)}.")
 
 		subreddit_flair_id_string = self._config[self._bot_username].get('subreddit_flair_id_map', '')
 		if subreddit_flair_id_string != '':
@@ -116,12 +113,6 @@ class RedditIO(threading.Thread, LogicMixin):
 		# this will automatically pick up the configuration from praw.ini
 		self._praw = praw.Reddit(self._bot_username)
 
-		if self._subreddits:
-			self._subreddit_helper = self._praw.subreddit('+'.join(self._subreddits))
-			self._submission_stream = self._subreddit_helper.stream.submissions(skip_existing=False, pause_after=0)
-			self._comment_stream = self._subreddit_helper.stream.comments(skip_existing=False, pause_after=0)
-		self._inbox_stream = self._praw.inbox.stream(skip_existing=False, pause_after=0)
-
 	def run(self):
 
 		# synchronize bot's own posts to the database
@@ -138,7 +129,8 @@ class RedditIO(threading.Thread, LogicMixin):
 
 			try:
 				logging.info(f"Beginning to process incoming reddit streams")
-				self.poll_incoming_streams()
+				if self._subreddits:
+					self.poll_incoming_streams()
 			except:
 				logging.exception("Exception occurred while processing the incoming streams")
 
@@ -168,7 +160,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 	def poll_inbox_stream(self):
 
-		for praw_thing in self._inbox_stream:
+		for praw_thing in self._praw.inbox.stream(pause_after=0):
 
 			if praw_thing is None:
 				break
@@ -207,8 +199,13 @@ class RedditIO(threading.Thread, LogicMixin):
 
 	def poll_incoming_streams(self):
 
+		# Setup all the streams for new comments and submissions
+		sr = self._praw.subreddit('+'.join(self._subreddits))
+		submissions = sr.stream.submissions(pause_after=0)
+		comments = sr.stream.comments(pause_after=0)
+
 		# Merge the streams in a single loop to DRY the code
-		for praw_thing in chain_listing_generators(self._submission_stream, self._comment_stream):
+		for praw_thing in chain_listing_generators(submissions, comments):
 
 			# Check in the database to see if it already exists
 			record = self.is_praw_thing_in_database(praw_thing)
@@ -626,10 +623,6 @@ def chain_listing_generators(*iterables):
 	# Special tool for chaining PRAW's listing generators
 	# It joins the three iterables together so that we can DRY
 	for it in iterables:
-		if not hasattr(it, '__iter__'):
-			# it is not an iterable.
-			continue
-
 		for element in it:
 			if element is None:
 				break

@@ -87,11 +87,17 @@ class Text2Image(threading.Thread, TaggingMixin):
 
 		start_time = time.time()
 
+		# pop the prefix out from the parameters
+		search_prefix = image_generation_parameters.pop('image_post_search_prefix', None)
+
 		# pop the prompt out from the args
 		prompt = image_generation_parameters.pop('prompt', '').replace('\'', '').replace("\"", "")
 		x = image_generation_parameters.pop('x_size', 256)
 		y = image_generation_parameters.pop('y_size', 256)
 		iterations = image_generation_parameters.pop('iterations', 500)
+
+		if search_prefix:
+			prompt = f"{prompt} | {search_prefix}"
 
 		cmd_change_directory = f"cd {vqgan_path}"
 		cmd_generate = f"python {vqgan_path}/generate.py -p '{prompt}' -s {x} {y} -o {filepath} -i {iterations}"

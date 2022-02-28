@@ -62,6 +62,8 @@ from utils.keyword_helper import KeywordHelper
 kw_helper = KeywordHelper()
 default_negative_keywords = kw_helper._negative_keywords
 
+config_negative_keywords = []
+
 if config['DEFAULT']['negative_keywords']:
 	# import config negative keywords
 	config_negative_keywords = config['DEFAULT']['negative_keywords'].split(',')
