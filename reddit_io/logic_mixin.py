@@ -131,6 +131,12 @@ class LogicMixin(TaggingMixin):
 			logging.info(f"{praw_thing} Failed toxicity test, no reply..")
 			return 0
 
+		# if the bot is mentioned, or its username is in the thing_text_content, reply 100%
+		if getattr(praw_thing, 'type', '') == 'username_mention' or\
+			self._praw.user.me().name.lower() in thing_text_content.lower() or\
+			isinstance(praw_thing, praw_Message):
+			return self._message_mention_reply_probability
+
 		# From here we will start to calculate the probability cumulatively
 		# Adjusting the weights here will change how frequently the bot will post
 		# Try not to spam the sub too much and let other bots and humans have space to post
@@ -181,12 +187,6 @@ class LogicMixin(TaggingMixin):
 			if praw_thing.submission.author == self._praw.user.me().name:
 				# the submission is by the bot, and favor that with a boost
 				base_probability += self._own_submission_reply_boost
-
-		# if the bot is mentioned, or its username is in the thing_text_content, reply 100%
-		if getattr(praw_thing, 'type', '') == 'username_mention' or\
-			self._praw.user.me().name.lower() in thing_text_content.lower() or\
-			isinstance(praw_thing, praw_Message):
-			base_probability = self._message_mention_reply_probability
 
 		reply_probability = min(base_probability, 1)
 
