@@ -15,7 +15,7 @@ class KeywordHelper():
 		('abor', 'tion'), ('antisemiti'), ('ar', 'yan'), ('ausch', 'witz'),
 		('beh', 'ead'), ('black', ' people'),
 		('child p', 'orn'), ('chi', 'nk'), ('clinton'), ('columbine'), ('concentrati', 'on camp'),
-		('da', 'go'), ('decapi', 'tat')
+		('da', 'go'), ('decapi', 'tat'),
 		('execution'),
 		('geno', 'cide'),
 		('hate', ' you'), ('hit', 'ler'), ('holo', 'caust'), ('homophob'),
