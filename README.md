@@ -10,7 +10,9 @@ Works on Windows with Python 3.8+ (support for SQLite3's JSON field type is requ
 
 This is the framework for an AI/Machine Learning Reddit Chatbot.
 
-The bot works by reading the comments and then using OpenAI's GPT-2 model to generate a new comment. The AI model is smart enough to generate a new comment on the topic.
+The bot works by reading Reddit comments and then using OpenAI's GPT-2 model to generate a new comment. The AI model is smart enough to generate a new comment on the topic.
+
+The model also uses a small Bert model (courtesy of the Detoxify package) to classify toxic and offensive content.
 
 This framework also contains scripts and tools for fine-tuning the GPT-2 model. Fine-tuning will give your chatbot a personality and make it generate text in particular themes.
 
@@ -54,6 +56,10 @@ Documentation: http://docs.peewee-orm.com/en/latest/index.html
 `praw` A Python package to interface with Reddit's API. It streamlines a lot of the hard work of interacting with the API.
 
 Documentation: https://praw.readthedocs.io/en/latest/
+
+`detoxify` A python package wrapper around a Bert model that can classify the toxicity of comments.
+
+Documentation: https://pypi.org/project/detoxify/
 
 ## OVERVIEW OF CREATING A GPT-2 BOT
 This is a very broad overview of the workflow for creating an ssi-bot

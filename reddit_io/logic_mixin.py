@@ -126,6 +126,11 @@ class LogicMixin(TaggingMixin):
 		if submission_link_flair_text.lower() in ['announcement']:
 			return 0
 
+		if self._toxicity_helper.text_above_toxicity_threshold(thing_text_content):
+			# The text is above the toxicity as measured by the detoxify model
+			logging.info(f"{praw_thing} Failed toxicity test, no reply..")
+			return 0
+
 		# if the bot is mentioned, or its username is in the thing_text_content, reply 100%
 		if getattr(praw_thing, 'type', '') == 'username_mention' or\
 			self._praw.user.me().name.lower() in thing_text_content.lower() or\

@@ -16,6 +16,8 @@ from reddit_io.tagging_mixin import TaggingMixin
 from bot_db.db import Thing as db_Thing
 
 from utils.keyword_helper import KeywordHelper
+from utils.toxicity_helper import ToxicityHelper
+
 from utils.memory import get_available_memory
 from utils import ROOT_DIR
 
@@ -44,8 +46,11 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 
 		# Configure the keyword helper to check negative keywords in the generated text
 		self._keyword_helper = KeywordHelper()
+		self._toxicity_helper = ToxicityHelper()
 
 	def run(self):
+
+		logging.info("Starting GPT-2 text generator daemon")
 
 		while True:
 
@@ -86,6 +91,11 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 						valid = self.validate_generated_text(job.source_name, prompt, generated_text)
 						if not valid:
 							logging.info(f"Generated text for {job} failed validation, this text will be rejected.")
+							continue
+
+						toxicity_failure = self.validate_toxicity(job.bot_username, prompt, generated_text)
+						if toxicity_failure:
+							logging.info(f"Generated text for {job} failed toxicity test, this text will be rejected.-> {generated_text}")
 							continue
 
 						# if the model generated text, set it into the 'job'
@@ -141,6 +151,16 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 					where(db_Thing.status == 3).\
 					order_by(db_Thing.created_utc)
 		return list(query)
+
+	def validate_toxicity(self, bot_username, prompt, generated_text):
+
+		# Remove tags from the
+		new_text = generated_text[len(prompt):]
+		tagless_new_text = self.remove_tags_from_string(new_text)
+
+		# Reconfigure the toxicity helper to use the bot's config
+		self._toxicity_helper.load_config_section(bot_username)
+		return self._toxicity_helper.text_above_toxicity_threshold(tagless_new_text)
 
 	def validate_generated_text(self, source_name, prompt, generated_text):
 

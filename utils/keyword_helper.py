@@ -12,27 +12,25 @@ class KeywordHelper():
 	# It's only inteded as a basic defence.
 	# Operator should train their model to avoid falling back on this.
 	_default_negative_keywords = [
-		('abor', 'tion'), ('antisemiti'), ('ar', 'yan'), ('assassin'), ('ausch', 'witz'),
-		('beh', 'ead'), ('black', ' people'), ('bomb'),
-		('child p', 'orn'), ('chi', 'nk'), ('clinton'), ('columbine'), ('concentrati', 'on camp'), ('cu', 'ck'), ('c', 'unt'),
-		('da', 'go'), ('dead'), ('death'), ('decapi', 'tat'), ('dies'), ('died'), ('drown'),
+		('abor', 'tion'), ('antisemiti'), ('ar', 'yan'), ('ausch', 'witz'),
+		('beh', 'ead'), ('black', ' people'),
+		('child p', 'orn'), ('chi', 'nk'), ('clinton'), ('columbine'), ('concentrati', 'on camp'),
+		('da', 'go'), ('decapi', 'tat'),
 		('execution'),
-		('f', 'ag'), ('fuc', 'k off'), ('fuc', 'k you'),
 		('geno', 'cide'),
 		('hate', ' you'), ('hit', 'ler'), ('holo', 'caust'), ('homophob'),
 		('inc', 'est'), ('is', 'is'), ('israel'),
 		('jew', 'ish'), ('je', 'ws'), ('ji', 'had'),
-		('ki', 'ke'), ('k', 'ill'), ('kk', 'k'), ('kys'),
+		('ki', 'ke'), ('kk', 'k'), ('kys'),
 		('lol', 'i'),
 		('maste', 'r race'), ('murder'), ('muslim'),
 		('nation', 'alist'), ('na', 'zi'), ('nig', 'ga'), ('nig', 'ger'),
-		('pae', 'do'), ('pak', 'i'), ('pale', 'stin'), ('ped', 'o'), ('po', 'rnhub'),
-		('rac' 'ist'), ('r', 'ape'), ('ra', 'ping'), ('ra', 'pist'), ('ret', 'ard'),
-		('school ', 'shoot'), ('self harm'), ('semi', 'ti'), ('shi', 'thole'), ('shoot'), ('stab'), ('supremacy'),
-		('sl', 'ut'), ('sp', 'ic'), ('suicide'), ('swas', 'tika'), ('shut the ', '\\w{4} up'), ('suck my d', 'ick'),
+		('pae', 'do'), ('pak', 'i'), ('pale', 'stin'), ('ped', 'o'), ('putin'),
+		('rac' 'ist'), ('r', 'ape'), ('ra', 'pi'), ('ret', 'ard'),
+		('school ', 'shoot'), ('self harm'), ('semi', 'ti'), ('supremacy'),
+		('sp', 'ic'), ('swas', 'tika'),
 		('terr', 'oris'), ('tor', 'ture'), ('tra', 'nny'), ('trump'),
 		('white p', 'ower'),
-		('you are a'), ('you d', 'ie'),
 	]
 
 	def __init__(self, config_key='DEFAULT'):

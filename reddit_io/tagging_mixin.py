@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging
 import random
+import re
 
 from praw.models import Comment as praw_Comment
 
@@ -215,3 +216,7 @@ class TaggingMixin():
 			return_dict['selftext'] = selftext
 
 		return return_dict
+
+	def remove_tags_from_string(self, input_string):
+		# Removes any <|sor u/user|>, <|sost|> etc from a string
+		return re.sub(r'(\<\|[\w\/ ]*\|\>)', ' ', input_string).strip()
