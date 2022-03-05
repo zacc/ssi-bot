@@ -36,14 +36,14 @@ class ToxicityHelper():
 				self._threshold_map[key] = self._config[config_section].getfloat(config_key)
 
 	def text_above_toxicity_threshold(self, input_text):
-		logging.info(f"ToxicityHelper, testing {input_text}")
+		# logging.info(f"ToxicityHelper, testing {input_text}")
 
 		try:
 			results = self._detoxify.predict(input_text)
 		except:
 			logging.exception(f"Exception when trying to run detoxify prediction on {input_text}")
 
-		logging.info(f"ToxicityHelper, results are {results}")
+		# logging.info(f"ToxicityHelper, results are {results}")
 
 		if self._threshold_map.keys() != results.keys():
 			logging.warning(f"Detoxify results keys and threshold map keys do not match. The toxicity level of the input text cannot be calculated.")
