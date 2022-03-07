@@ -254,8 +254,6 @@ class RedditIO(threading.Thread, LogicMixin):
 
 	def post_outgoing_reply_jobs(self, post_job):
 
-		bypass_finally = False
-
 		try:
 			logging.info(f'Starting to post reply job {post_job.id} to reddit')
 
@@ -295,7 +293,6 @@ class RedditIO(threading.Thread, LogicMixin):
 			if self._check_reply_matches_history(source_praw_thing, reply_parameters['body']):
 				logging.info(f"Job {post_job.id} had duplicated generated text.")
 
-				bypass_finally = True
 				# Clear the generated text on the post_job
 				# then it can try to re-generate it with a new random seed
 				post_job.generated_text = None
@@ -315,19 +312,18 @@ class RedditIO(threading.Thread, LogicMixin):
 			post_job.save()
 
 			logging.info(f"Job {post_job.id} reply submitted successfully")
+
 		except Exception as e:
 			logging.exception(e)
+			post_job.reddit_post_attempts += 1
+
+		else:
+			post_job.reddit_post_attempts += 1
 
 		finally:
-			if not bypass_finally:
-				# Increment the post attempts counter.
-				# This is to prevent posting too many times if there are errors
-				post_job.reddit_post_attempts += 1
 			post_job.save()
 
 	def post_outgoing_new_submission_jobs(self, post_job):
-
-		bypass_finally = False
 
 		try:
 			logging.info(f'Starting to post new submission job {post_job.id} to reddit')
@@ -384,8 +380,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		except praw.exceptions.RedditAPIException as e:
 			if 'DOMAIN_BANNED' in str(e):
 				# DOMAIN_BANNED exception can occur when the domain of a url/link post is blacklisted by reddit
-				bypass_finally = True
-				# 'Reset' the generated image and try again
+				# 'Reset' the generated image and try again - it will use a different image next time.
 				post_job.generated_image_path = None
 				post_job.reddit_post_attempts = 0
 				post_job.save()
@@ -393,12 +388,12 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		except Exception as e:
 			logging.exception(e)
+			post_job.reddit_post_attempts += 1
+
+		else:
+			post_job.reddit_post_attempts += 1
 
 		finally:
-			if not bypass_finally:
-				# Increment the post attempts counter.
-				# This is to prevent posting too many times if there are errors
-				post_job.reddit_post_attempts += 1
 			post_job.save()
 
 	def synchronize_bots_comments_submissions(self):
