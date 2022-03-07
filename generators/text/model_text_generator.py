@@ -4,9 +4,6 @@ import logging
 import threading
 import time
 
-import ftfy
-import codecs
-
 from pathlib import Path
 from configparser import ConfigParser
 
@@ -137,7 +134,7 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 		logging.info(f'{len(output_list)} sample(s) of text generated in {duration} seconds.')
 
 		if output_list:
-			return ftfy.fix_text(codecs.decode(output_list[0], "unicode_escape"))
+			return output_list[0]
 
 	def top_pending_jobs(self):
 		"""

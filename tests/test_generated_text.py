@@ -33,6 +33,7 @@ class TestGeneratedTextParsing():
 
 	@pytest.mark.parametrize("prompt, generated_text, expected",
 		[('<|soss|><|sot|>The title text<|eot|><|sost|>The selftext text<|eost|><|sor|>First reply<|eor|><|sor|>', '<|soss|><|sot|>The title text<|eot|><|sost|>The selftext text<|eost|><|sor|>First reply<|eor|><|sor|>Generated reply<|eor|>', {'body': "Generated reply"}),
+		('<|soss|><|sot|>The title text<|eot|><|sost|>The selftext\n\ntext<|eost|><|sor|>First reply<|eor|><|sor|>', '<|soss|><|sot|>The title text<|eot|><|sost|>The selftext\n\ntext<|eost|><|sor|>First reply<|eor|><|sor|>Generated reply<|eor|>', {'body': "Generated reply"}),
 		('<|sost|>Selftext<|eost|><|sor|>', '<|sost|>Selftext<|eost|><|sor|>This one will work<|', {'body': "This one will work"}),
 		('<|sost|>This one should not work', '<|sost|>This one should not work', {}),
 		('<|soss|><|sot|>The title only<|', '<|soss|><|sot|>The title only<|', {})])

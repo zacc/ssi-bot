@@ -3,6 +3,9 @@ import logging
 import random
 import re
 
+import ftfy
+import codecs
+
 from praw.models import Comment as praw_Comment
 
 
@@ -139,7 +142,7 @@ class TaggingMixin():
 	def extract_reply_from_generated_text(self, prompt, generated_text):
 
 		# remove any cruft
-		generated_text = generated_text.replace('&amp;#x200B;\n', '')
+		# generated_text = generated_text.replace('&amp;#x200B;\n', '')
 
 		# find the first instance of the end-of-comment tag, starting from the end of the prompt
 		index_of_truncate = generated_text.find(self._end_tag, len(prompt))
@@ -164,7 +167,7 @@ class TaggingMixin():
 		# extract the text from between the prompt and the truncate point
 		reply_body = generated_text[len(prompt):index_of_truncate]
 		if reply_body:
-			return {'body': reply_body}
+			return {'body': self._decode_generated_text(reply_body)}
 
 		# Return nothing
 		return {}
@@ -182,7 +185,7 @@ class TaggingMixin():
 
 		if (0 < len(title_text) < 300):
 			# Validate the title length is within reddit's range
-			return title_text
+			return self._decode_generated_text(title_text)
 
 	def extract_selftext_from_generated_text(self, generated_text):
 
@@ -193,14 +196,14 @@ class TaggingMixin():
 			return None
 
 		selftext_text = generated_text[idx_st_start + len(self._selftext_start_tag):idx_st_end]
-		return selftext_text
+		return self._decode_generated_text(selftext_text)
 
 	def extract_submission_from_generated_text(self, generated_text):
 
 		return_dict = {}
 
 		# remove any cruft
-		generated_text = generated_text.replace('&amp;#x200B;\n', '')
+		# generated_text = generated_text.replace('&amp;#x200B;\n', '')
 
 		title = self.extract_title_from_generated_text(generated_text)
 
@@ -220,3 +223,6 @@ class TaggingMixin():
 	def remove_tags_from_string(self, input_string):
 		# Removes any <|sor u/user|>, <|sost|> etc from a string
 		return re.sub(r'(\<\|[\w\/ ]*\|\>)', ' ', input_string).strip()
+
+	def _decode_generated_text(self, text):
+		return ftfy.fix_text(codecs.decode(text, "unicode_escape"))
