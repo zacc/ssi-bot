@@ -69,7 +69,7 @@ class Comment(Model):
 	id = TextField(primary_key=True)
 	link_id = TextField()
 	nest_level = IntegerField(null=True)
-	parent_id = TextField()
+	parent_id = TextField(index=True)
 	score = IntegerField()
 	stickied = BooleanField(default=False)
 
