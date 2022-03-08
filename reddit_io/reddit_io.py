@@ -111,7 +111,7 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		# start a reddit instance
 		# this will automatically pick up the configuration from praw.ini
-		self._praw = praw.Reddit(self._bot_username)
+		self._praw = praw.Reddit(self._bot_username, timeout=64)
 
 	def run(self):
 
