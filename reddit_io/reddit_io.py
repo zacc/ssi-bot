@@ -316,6 +316,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		except Exception as e:
 			logging.exception(e)
 			post_job.reddit_post_attempts += 1
+			raise e
 
 		else:
 			post_job.reddit_post_attempts += 1
@@ -389,6 +390,7 @@ class RedditIO(threading.Thread, LogicMixin):
 		except Exception as e:
 			logging.exception(e)
 			post_job.reddit_post_attempts += 1
+			raise e
 
 		else:
 			post_job.reddit_post_attempts += 1
