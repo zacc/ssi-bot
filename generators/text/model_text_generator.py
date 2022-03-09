@@ -4,6 +4,8 @@ import logging
 import threading
 import time
 
+import re
+
 from pathlib import Path
 from configparser import ConfigParser
 
@@ -73,11 +75,14 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 					# use the model to generate the text
 					# pass a copy of the parameters to keep the job values intact
 					generated_text = self.generate_text(job.bot_username, job.text_generation_parameters.copy())
+					
+					rgx = re.compile('u/[A-Za-z0-9_-]+')
+                    			generated_text_noUsernames = rgx.sub('', generated_text)
 
 					if generated_text:
 
 						# Check for any negative keywords in the generated text and if so, return nothing
-						negative_keyword_matches = self._keyword_helper.negative_keyword_matches(generated_text)
+						negative_keyword_matches = self._keyword_helper.negative_keyword_matches(generated_text_noUsernames)
 						if len(negative_keyword_matches) > 0:
 							# A negative keyword was found, so don't post this text back to reddit
 							logging.info(f"Negative keywords {negative_keyword_matches} found in generated text, this text will be rejected.")
@@ -90,9 +95,9 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 							logging.info(f"Generated text for {job} failed validation, this text will be rejected.")
 							continue
 
-						toxicity_failure = self.validate_toxicity(job.bot_username, prompt, generated_text)
+						toxicity_failure = self.validate_toxicity(job.bot_username, prompt, generated_text_noUsernames)
 						if toxicity_failure:
-							logging.info(f"Generated text for {job} failed toxicity test, this text will be rejected.-> {generated_text}")
+							logging.info(f"Generated text for {job} failed toxicity test, this text will be rejected.-> {generated_text_noUsernames}")
 							continue
 
 						# if the model generated text, set it into the 'job'
