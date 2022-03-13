@@ -462,7 +462,7 @@ class RedditIO(threading.Thread, LogicMixin):
 					where(db_Thing.source_name == 't3_new_submission').
 					where(db_Thing.bot_username == self._bot_username).
 					where(db_Thing.status <= 7).
-					where(db_Thing.created_utc > (datetime.utcnow() - timedelta(hours=hourly_frequency))))
+					where(db_Thing.created_utc > (datetime.utcnow() - timedelta(hours=24))))
 
 		if pending_submissions:
 			logging.info(f"A submission is pending for r/{subreddit}...")
