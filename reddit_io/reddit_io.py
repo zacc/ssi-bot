@@ -176,6 +176,8 @@ class RedditIO(threading.Thread, LogicMixin):
 
 				if self._is_praw_thing_removed_or_deleted(praw_thing):
 					# It's been deleted, removed or locked. Skip this thing entirely.
+					# mark the inbox item read
+					praw_thing.mark_read()
 					continue
 
 				reply_probability = self.calculate_reply_probability(praw_thing)
@@ -527,7 +529,11 @@ class RedditIO(threading.Thread, LogicMixin):
 
 		submission = None
 
-		if isinstance(praw_thing, praw_Comment):
+		if isinstance(praw_thing, praw_Message):
+			# A message that has been deleted can't be retrieved due to bug in praw
+			return False
+
+		elif isinstance(praw_thing, praw_Comment):
 			submission = praw_thing.submission
 
 			if praw_thing.body in ['[removed]', '[deleted]']:

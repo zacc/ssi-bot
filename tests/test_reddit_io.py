@@ -17,6 +17,7 @@ class TestCanReplyToPrawThing():
 		('tests/pickles/comment_submission_locked.pkl', True),
 		('tests/pickles/submission_selftext.pkl', False),
 		('tests/pickles/comment.pkl', False),
+		('tests/pickles/inbox_message.pkl', False),
 		])
 	def test_can_reply_to_praw_thing(self, pickle_path, expected):
 
