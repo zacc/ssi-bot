@@ -42,7 +42,6 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 		self._config.read('ssi-bot.ini')
 
 		# Configure the keyword helper to check negative keywords in the generated text
-		self._keyword_helper = KeywordHelper()
 		self._toxicity_helper = ToxicityHelper()
 
 	def run(self):
@@ -77,8 +76,8 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 					if generated_text:
 
 						# Check for any negative keywords in the generated text and if so, return nothing
-						negative_keyword_matches = self._keyword_helper.negative_keyword_matches(generated_text)
-						if len(negative_keyword_matches) > 0:
+						negative_keyword_matches = self.test_text_against_keywords(job.bot_username, generated_text)
+						if negative_keyword_matches:
 							# A negative keyword was found, so don't post this text back to reddit
 							logging.info(f"Negative keywords {negative_keyword_matches} found in generated text, this text will be rejected.")
 							continue
@@ -148,6 +147,11 @@ class ModelTextGenerator(threading.Thread, TaggingMixin):
 					where(db_Thing.status == 3).\
 					order_by(db_Thing.created_utc)
 		return list(query)
+
+	def test_text_against_keywords(self, bot_username, generated_text):
+		# Load the keyword helper with this bot's config
+		keyword_helper = KeywordHelper(bot_username)
+		return keyword_helper.negative_keyword_matches(generated_text)
 
 	def validate_toxicity(self, bot_username, prompt, generated_text):
 
