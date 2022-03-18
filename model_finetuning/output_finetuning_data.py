@@ -55,6 +55,9 @@ author_list = [
 	'YoMammaJokebot', 'youtubefactsbot', 'YTubeInfoBot'
 	]
 
+if config['DEFAULT']['negative_users']:
+    author_list += config['DEFAULT']['negative_users'].split(",")
+
 lowercase_author_list = [a.lower() for a in author_list]
 
 from utils.keyword_helper import KeywordHelper
