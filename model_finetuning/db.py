@@ -8,11 +8,13 @@ import time
 from functools import partial, singledispatch
 
 from playhouse.sqlite_ext import *
-from playhouse.sqlite_ext import SqliteExtDatabase
+from playhouse.migrate import *
+
 import numpy as np
 
 db_file_path = os.path.join('pushshift.sqlite3')
 db_instance = SqliteExtDatabase(db_file_path, thread_safe=True, pragmas={'journal_mode': 'wal2', 'foreign_keys': 0}, regexp_function=True)
+
 
 @singledispatch
 def to_serializable(val):
@@ -103,3 +105,18 @@ def create_tables():
 
 	table_list = [Submission, Comment]
 	db_instance.create_tables(models=table_list)
+
+	# attempt to add any columns that are new, to the database
+	migrator = SqliteMigrator(db_instance)
+
+	submission_table_cols = [i.name for i in db_instance.get_columns(Submission._meta.table_name)]
+	if Submission.detoxify_prediction.name not in submission_table_cols:
+		migrate(
+			migrator.add_column(Submission._meta.table_name, 'detoxify_prediction', Submission.detoxify_prediction),
+		)
+
+	comment_table_cols = [i.name for i in db_instance.get_columns(Comment._meta.table_name)]
+	if Comment.detoxify_prediction.name not in comment_table_cols:
+		migrate(
+			migrator.add_column(Comment._meta.table_name, 'detoxify_prediction', Comment.detoxify_prediction),
+		)
