@@ -11,6 +11,10 @@ from db import *
 
 
 class PushIOProcessor:
+	"""
+	A class for downloading from PUSHIO and writing directly to a DB as efficiently as possible without using a
+	out of process mechanism.
+	"""
 	def __init__(self, start_date, end_date, subreddit, db_instance, min_score=5):
 		self.score = min_score
 		self.start_date_time = datetime.fromisoformat(start_date)
