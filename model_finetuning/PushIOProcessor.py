@@ -15,6 +15,7 @@ class PushIOProcessor:
 	A class for downloading from PUSHIO and writing directly to a DB as efficiently as possible without using a
 	out of process mechanism.
 	"""
+
 	def __init__(self, start_date, end_date, subreddit, db_instance, min_score=5):
 		self.score = min_score
 		self.start_date_time = datetime.fromisoformat(start_date)
@@ -250,9 +251,15 @@ if __name__ == '__main__':
 	start_date = config.get("start_date", "DEFAULT")
 	end_date = config.get("end_date", "DEFAULT")
 	subreddits = config.get("training_subreddits", "DEFAULT")
+
+	# NOTE: For those who care. Add a min_score to the configuration to allow a more contextual collection of
+	# meaningful comments. The choice of one here is not-ideal for ALL subreddits
+
 	# NOTE: It is less effective to run this in parallel. Let the lag between writing to the DB and performing a rest
+
 	# request not compete against each other because at some point push will time you out or the DB will choke to a crawl.
 	# Use multithreading at your own peril.
 	for sub in subreddits:
-		processor = PushIOProcessor(start_date=start_date, end_date=end_date, subreddit=sub, db_instance=db_instance,min_score=500)
+		processor = PushIOProcessor(start_date=start_date, end_date=end_date, subreddit=sub, db_instance=db_instance,
+									min_score=1)
 		processor.run()
