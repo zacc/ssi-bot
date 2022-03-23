@@ -240,7 +240,7 @@ class PushIOProcessor:
 
 			self.process_submission(submission_response)
 
-			return
+		return
 
 
 if __name__ == '__main__':
