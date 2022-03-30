@@ -186,12 +186,12 @@ class RedditIO(threading.Thread, LogicMixin):
 				random_value = random.random()
 
 				if random_value < reply_probability:
-					logging.info(f"{praw_thing} Random value {random_value:.3f} < Reply probabililty {(reply_probability):.1f}. Starting a reply..")
+					logging.info(f"{praw_thing} Random value {random_value:.3f} is < reply probabililty {(reply_probability):.3f}. Starting a reply..")
 
 					# It will generate a reply, so grab the parameters before we put it into the database
 					text_generation_parameters = self.get_text_generation_parameters(praw_thing)
 				else:
-					logging.info(f"{praw_thing} Random value {random_value:.3f} < Reply probabililty {(reply_probability):.1f}. No reply.. :(")
+					logging.info(f"{praw_thing} Random value {random_value:.3f} is not < reply probabililty {(reply_probability):.3f}. No reply.. :(")
 
 				# insert it into the database
 				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters=text_generation_parameters)
@@ -227,12 +227,12 @@ class RedditIO(threading.Thread, LogicMixin):
 				random_value = random.random()
 
 				if random_value < reply_probability:
-					logging.info(f"{praw_thing} Random value {random_value:.3f} < Reply probabililty {(reply_probability):.1f}. Starting a reply..")
+					logging.info(f"{praw_thing} Random value {random_value:.3f} is < reply probabililty {(reply_probability):.3f}. Starting a reply..")
 
 					# It will generate a reply, so grab the parameters before we put it into the database
 					text_generation_parameters = self.get_text_generation_parameters(praw_thing)
 				else:
-					logging.info(f"{praw_thing} Random value {random_value:.3f} < Reply probabililty {(reply_probability):.1f}. No reply.. :(")
+					logging.info(f"{praw_thing} Random value {random_value:.3f} is not < reply probabililty {(reply_probability):.3f}. No reply.. :(")
 
 				# insert it into the database
 				self.insert_praw_thing_into_database(praw_thing, text_generation_parameters=text_generation_parameters)
