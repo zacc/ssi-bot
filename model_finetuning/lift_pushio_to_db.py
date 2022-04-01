@@ -60,28 +60,30 @@ class PushIOProcessor:
 		text = text.strip()
 		return text
 
-	def loop_between_dates(self):
+	@staticmethod
+	def loop_between_dates(start_date_time, end_date_time):
 		# yields start and end dates between the dates given
 		# at weekly intervals
 		time_interval = timedelta(weeks=1)
 
 		# Make sure the start_datetime is always a Monday by shifting the start back to monday
-		start_datetime = self.start_date_time - timedelta(days=self.start_date_time.weekday())
+		start_datetime = start_date_time - timedelta(days=start_date_time.weekday())
 
 		period_start_date = start_datetime
 
-		while period_start_date < self.end_date_time:
-			period_end_date = min(period_start_date + time_interval, self.end_date_time)
+		while period_start_date < end_date_time:
+			period_end_date = min(period_start_date + time_interval, end_date_time)
 
 			yield period_start_date, period_end_date
 
-			if (period_start_date + time_interval) >= self.end_date_time:
+			if (period_start_date + time_interval) >= end_date_time:
 				# if this loop's date is beyond the end_datetime, break the loop
 				break
 			period_start_date = period_end_date
 
-	def calc_date_range(self):
-		return self.end_date_time.timestamp() - self.start_date_time.timestamp()
+	@staticmethod
+	def calc_date_range(start_date_time, end_date_time):
+		return end_date_time.timestamp() - start_date_time.timestamp()
 
 	def get_with_retry(self, link: str) -> Response:
 		try:
@@ -224,8 +226,8 @@ class PushIOProcessor:
 		return
 
 	def run(self) -> None:
-		for start, end in self.loop_between_dates():
-			time_delta = (end.timestamp() - self.start_date_time.timestamp()) / self.calc_date_range()
+		for start, end in self.loop_between_dates(self.start_date_time, self.end_date_time):
+			time_delta = (end.timestamp() - self.start_date_time.timestamp()) / self.calc_date_range(self.start_date_time, self.end_date_time)
 
 			logging.info(
 				f"downloading submission data from {start.date()} to {end.date()}... {round(time_delta * 100, 2)}%")
@@ -239,18 +241,19 @@ class PushIOProcessor:
 			submission_response = self.get_with_retry(submission_search_link)
 
 			self.process_submission(submission_response)
-
-			return
+		return None
 
 
 if __name__ == '__main__':
 	logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+	create_tables()
+
 	config = ConfigParser()
 	config.read('dataset.ini')
-	# TODO: Add config stuff
+
 	start_date = config.get("start_date", "DEFAULT")
 	end_date = config.get("end_date", "DEFAULT")
-	subreddits = config.get("training_subreddits", "DEFAULT")
+	subreddits = [item for item in config.get("training_subreddits", "DEFAULT").split(",")]
 
 	# NOTE: For those who care. Add a min_score to the configuration to allow a more contextual collection of
 	# meaningful comments. The choice of one here is not-ideal for ALL subreddits
