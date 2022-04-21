@@ -1,3 +1,10 @@
+UPDATE:
+This project is no longer being maintained, but is being kept here for you to fork.
+
+Visit r/SubSimGPT2Interactive and the associated Discord channel to chat with other users and find out about any evolved forks.
+
+
+-----------------------------
 
 Minimum Python requirement: Python 3.7
 
