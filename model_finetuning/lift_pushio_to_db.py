@@ -252,7 +252,7 @@ if __name__ == '__main__':
 	config.read('dataset.ini')
 
 	start_date = config["DEFAULT"][start_date"]
-	end_date = config.get("end_date", "DEFAULT")
+	end_date = config["DEFAULT"]["end_date"]
 	subreddits = [item for item in config.get("training_subreddits", "DEFAULT").split(",")]
 
 	# NOTE: For those who care. Add a min_score to the configuration to allow a more contextual collection of
