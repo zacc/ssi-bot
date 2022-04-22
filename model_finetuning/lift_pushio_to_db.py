@@ -251,7 +251,7 @@ if __name__ == '__main__':
 	config = ConfigParser()
 	config.read('dataset.ini')
 
-	start_date = config["DEFAULT"][start_date"]
+	start_date = config["DEFAULT"]["start_date"]
 	end_date = config["DEFAULT"]["end_date"]
 	subreddits = [item for item in config.get("training_subreddits", "DEFAULT").split(",")]
 
