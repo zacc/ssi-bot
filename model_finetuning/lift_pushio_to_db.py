@@ -253,7 +253,7 @@ if __name__ == '__main__':
 
 	start_date = config["DEFAULT"]["start_date"]
 	end_date = config["DEFAULT"]["end_date"]
-	subreddits = [item for item in config.get("training_subreddits", "DEFAULT").split(",")]
+	subreddits = [item for item in config["DEFAULT"]["training_subreddits"].split(",")
 
 	# NOTE: For those who care. Add a min_score to the configuration to allow a more contextual collection of
 	# meaningful comments. The choice of one here is not-ideal for ALL subreddits
